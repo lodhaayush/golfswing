@@ -1,0 +1,263 @@
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { VideoUploader } from '@/components/VideoUploader'
+import { VideoPlayer } from '@/components/VideoPlayer'
+import { AnalysisProgress } from '@/components/AnalysisProgress'
+import { SwingResults } from '@/components/SwingResults'
+import { SwingTimeline } from '@/components/SwingTimeline'
+import { HistoryPanel } from '@/components/HistoryPanel'
+import { useVideoStorage } from '@/hooks/useVideoStorage'
+import { useSwingAnalysis } from '@/hooks/useSwingAnalysis'
+import { useAnalysisHistory } from '@/hooks/useAnalysisHistory'
+import { useAutoAnalyze } from '@/hooks/useAutoAnalyze'
+import { analyzeSwing } from '@/utils/swingAnalyzer'
+import { logger } from '@/utils/debugLogger'
+import type { VideoFile } from '@/types/video'
+import type { AnalysisResult } from '@/types/analysis'
+import type { SavedAnalysis } from '@/hooks/useAnalysisHistory'
+
+type AppState = 'upload' | 'player' | 'analyzing' | 'results'
+
+function App() {
+  const [appState, setAppState] = useState<AppState>('upload')
+  const [currentVideo, setCurrentVideo] = useState<VideoFile | null>(null)
+  const [videoUrl, setVideoUrl] = useState<string | null>(null)
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [videoDuration, setVideoDuration] = useState(0)
+
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  const { saveVideo, getVideoUrl, revokeVideoUrl } = useVideoStorage()
+  const { progress, startAnalysis, cancelAnalysis } = useSwingAnalysis()
+  const { history, isLoading: historyLoading, saveAnalysis, deleteAnalysis } = useAnalysisHistory()
+
+  // Track video duration
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const handleLoadedMetadata = () => {
+      setVideoDuration(video.duration)
+    }
+
+    video.addEventListener('loadedmetadata', handleLoadedMetadata)
+    return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata)
+    }
+  }, [videoUrl])
+
+  // Clean up video URL when component unmounts or video changes
+  useEffect(() => {
+    return () => {
+      if (videoUrl) {
+        revokeVideoUrl(videoUrl)
+      }
+    }
+  }, [videoUrl, revokeVideoUrl])
+
+  const handleVideoSelect = useCallback(async (file: File) => {
+    // Revoke previous URL if exists
+    if (videoUrl) {
+      revokeVideoUrl(videoUrl)
+    }
+
+    // Save video to IndexedDB
+    const savedVideo = await saveVideo(file)
+    setCurrentVideo(savedVideo)
+
+    // Create URL for playback
+    const url = getVideoUrl(savedVideo)
+    setVideoUrl(url)
+
+    // Reset analysis
+    setAnalysisResult(null)
+
+    // Transition to player
+    setAppState('player')
+  }, [saveVideo, getVideoUrl, revokeVideoUrl, videoUrl])
+
+  const handleUploadNew = useCallback(() => {
+    if (videoUrl) {
+      revokeVideoUrl(videoUrl)
+    }
+    setVideoUrl(null)
+    setCurrentVideo(null)
+    setAnalysisResult(null)
+    setAppState('upload')
+  }, [videoUrl, revokeVideoUrl])
+
+  const handleAnalyze = useCallback(async () => {
+    logger.info('handleAnalyze called')
+    logger.info('videoRef.current exists:', !!videoRef.current)
+    logger.info('currentVideo:', currentVideo ? { id: currentVideo.id, name: currentVideo.name } : null)
+
+    if (!videoRef.current || !currentVideo) {
+      logger.error('Video element or video data not available')
+      return
+    }
+
+    setAppState('analyzing')
+    logger.info('Starting analysis, calling startAnalysis...')
+
+    try {
+      const frames = await startAnalysis(videoRef.current)
+      logger.info('Analysis returned frames:', frames.length)
+
+      if (frames.length > 0) {
+        // Run full swing analysis
+        const result = analyzeSwing(frames, currentVideo.id)
+
+        // Log detailed analysis results for debugging variance
+        logger.info('=== ANALYSIS RESULTS ===')
+        logger.info('Video:', currentVideo.name)
+        logger.info('Overall Score:', result.overallScore)
+        logger.info('Handedness:', result.isRightHanded ? 'Right' : 'Left')
+        logger.info('Metrics:', {
+          maxXFactor: result.metrics.maxXFactor,
+          maxShoulderRotation: result.metrics.maxShoulderRotation,
+          maxHipRotation: result.metrics.maxHipRotation,
+          addressSpineAngle: result.metrics.addressSpineAngle,
+          impactSpineAngle: result.metrics.impactSpineAngle,
+          topLeadArmExtension: result.metrics.topLeadArmExtension,
+          impactLeadArmExtension: result.metrics.impactLeadArmExtension,
+          addressKneeFlex: result.metrics.addressKneeFlex,
+          topKneeFlex: result.metrics.topKneeFlex,
+        })
+        logger.info('Tempo:', {
+          backswingDuration: result.tempo.backswingDuration,
+          downswingDuration: result.tempo.downswingDuration,
+          tempoRatio: result.tempo.tempoRatio,
+        })
+        logger.info('Phase Segments:', result.phaseSegments.length)
+        logger.info('=== END RESULTS ===')
+
+        setAnalysisResult(result)
+        setAppState('results')
+
+        // Save to history
+        await saveAnalysis(result, currentVideo.name)
+      } else {
+        // Analysis was cancelled or failed
+        logger.warn('No frames returned, going back to player')
+        setAppState('player')
+      }
+    } catch (err) {
+      logger.error('handleAnalyze error:', err instanceof Error ? { message: err.message, stack: err.stack } : err)
+      setAppState('player')
+    }
+  }, [startAnalysis, currentVideo, saveAnalysis])
+
+  const handleCancelAnalysis = useCallback(() => {
+    cancelAnalysis()
+    setAppState('player')
+  }, [cancelAnalysis])
+
+  const handleBackToPlayer = useCallback(() => {
+    setAppState('player')
+  }, [])
+
+  const handleTimeUpdate = useCallback((time: number) => {
+    setCurrentTime(time)
+  }, [])
+
+  const handleSeek = useCallback((time: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = time
+    }
+  }, [])
+
+  const handleSelectFromHistory = useCallback((savedAnalysis: SavedAnalysis) => {
+    // Load the saved analysis result (video not available, just show results)
+    setAnalysisResult(savedAnalysis.result)
+    setVideoUrl(null)
+    setCurrentVideo(null)
+    setAppState('results')
+  }, [])
+
+  // Auto-load video from URL params (dev mode only)
+  useAutoAnalyze({
+    onVideoLoad: handleVideoSelect,
+    onAnalyze: handleAnalyze,
+    videoRef,
+    isReady: appState === 'player' && !!videoUrl,
+  })
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* Header */}
+      <header className="border-b border-gray-700 bg-gray-800">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <h1 className="text-2xl font-bold text-green-400">Golf Swing Coach</h1>
+          <p className="text-gray-400 text-sm">Analyze your swing with AI-powered pose detection</p>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {appState === 'upload' && (
+          <div className="space-y-8">
+            <VideoUploader onVideoSelect={handleVideoSelect} />
+            <HistoryPanel
+              history={history}
+              isLoading={historyLoading}
+              onSelect={handleSelectFromHistory}
+              onDelete={deleteAnalysis}
+            />
+          </div>
+        )}
+
+        {(appState === 'player' || appState === 'analyzing') && videoUrl && (
+          <div className="space-y-6">
+            <div className={appState === 'analyzing' ? 'opacity-50 pointer-events-none' : ''}>
+              <VideoPlayer
+                src={videoUrl}
+                videoRef={videoRef}
+                onAnalyze={appState === 'player' ? handleAnalyze : undefined}
+                onUploadNew={appState === 'player' ? handleUploadNew : undefined}
+                onTimeUpdate={handleTimeUpdate}
+              />
+            </div>
+
+            {appState === 'analyzing' && (
+              <AnalysisProgress
+                phase={progress.phase}
+                progress={progress.progress}
+                message={progress.message}
+                onCancel={handleCancelAnalysis}
+              />
+            )}
+          </div>
+        )}
+
+        {appState === 'results' && analysisResult && (
+          <div className="space-y-6">
+            {videoUrl && (
+              <VideoPlayer
+                src={videoUrl}
+                videoRef={videoRef}
+                poseFrames={analysisResult.frames}
+                onTimeUpdate={handleTimeUpdate}
+              />
+            )}
+
+            {/* Swing Timeline */}
+            <SwingTimeline
+              segments={analysisResult.phaseSegments}
+              currentTime={currentTime}
+              duration={videoDuration}
+              onSeek={handleSeek}
+            />
+
+            <SwingResults
+              result={analysisResult}
+              onBackToPlayer={handleBackToPlayer}
+              onUploadNew={handleUploadNew}
+            />
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
+
+export default App

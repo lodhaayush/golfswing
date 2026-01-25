@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Logs
+debug.log
+*.log
+
+# OS files
+.DS_Store
+
+# Video files
+*.mov
+*.MOV
+*.mp4
+*.MP4
+*.avi
+*.mkv
+
+# Environment files
+.env
+.env.local
+.env.*.local
