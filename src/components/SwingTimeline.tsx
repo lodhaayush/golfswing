@@ -71,10 +71,6 @@ export function SwingTimeline({
                 width: `${Math.max(widthPercentage, 1)}%`,
                 backgroundColor: getPhaseColor(segment.phase),
               }}
-              onClick={(e) => {
-                e.stopPropagation()
-                handlePhaseClick(segment)
-              }}
               title={`${getPhaseDisplayName(segment.phase)}: ${segment.startTime.toFixed(2)}s - ${segment.endTime.toFixed(2)}s`}
             >
               {widthPercentage > 10 && (

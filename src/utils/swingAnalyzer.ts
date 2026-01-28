@@ -1,9 +1,26 @@
 import type { PoseFrame } from '@/types/pose'
-import type { AnalysisResult, SwingMetrics, PhaseSegment } from '@/types/analysis'
+import type { AnalysisResult, SwingMetrics, PhaseSegment, ClubType } from '@/types/analysis'
+import type { CameraAngle } from './angleCalculations'
 import { detectSwingPhases, type PhaseFrame as DetectedPhaseFrame } from './phaseDetection'
 import { consolidatePhases, calculateTempoMetrics, evaluateTempo } from './tempoAnalysis'
-import { detectCameraAngleFromFrames } from './angleCalculations'
+import {
+  detectCameraAngleFromFrames,
+  detectClubTypeFromFrames,
+  calculateRotationFromWidth,
+  calculateHipSway,
+  calculateHeadStability,
+  calculateImpactExtension,
+} from './angleCalculations'
 import { logger } from './debugLogger'
+import {
+  SCORING_WEIGHTS,
+  SCORING_RANGES,
+  CLUB_SCORING,
+  FEEDBACK_THRESHOLDS,
+  DEFAULTS,
+} from './constants'
+import { getDetectedMistakes, type DetectorInput } from './detectors'
+import type { DetectorResult } from './detectors/types'
 
 /**
  * Generate a unique ID for the analysis
@@ -26,40 +43,89 @@ function angularDifference(angle1: number, angle2: number): number {
 
 /**
  * Calculate aggregate swing metrics from phase frames
- * Rotations are normalized relative to the address position for camera-angle independence
+ * Rotations are calculated differently based on camera angle:
+ * - Face-on: Uses width-narrowing method (reliable)
+ * - DTL: Rotations set to 0 (unreliable from down-the-line view)
+ * - Oblique: Uses Z-based rotation (best effort)
  */
 function calculateSwingMetrics(
   phases: DetectedPhaseFrame[],
-  isRightHanded: boolean
+  frames: PoseFrame[],
+  isRightHanded: boolean,
+  cameraAngle: CameraAngle
 ): SwingMetrics {
-  // Find key frames by phase
-  const addressFrame = phases.find((p) => p.phase === 'address')
-  const topFrame = phases.find((p) => p.phase === 'top')
-  const impactFrame = phases.find((p) => p.phase === 'impact')
+  // Find key frames by phase - use array indices since phases[i] corresponds to frames[i]
+  const addressPhaseIdx = phases.findIndex((p) => p.phase === 'address')
+  const topPhaseIdx = phases.findIndex((p) => p.phase === 'top')
+  const impactPhaseIdx = phases.findIndex((p) => p.phase === 'impact')
+  const followThroughPhaseIdx = phases.findIndex((p) => p.phase === 'follow-through')
 
-  // Get baseline rotations from address position
-  const baselineHipRotation = addressFrame?.metrics.hipRotation ?? 0
-  const baselineShoulderRotation = addressFrame?.metrics.shoulderRotation ?? 0
+  // Find end of address phase (last consecutive address frame)
+  let addressEndIdx = addressPhaseIdx
+  for (let i = addressPhaseIdx + 1; i < phases.length; i++) {
+    if (phases[i].phase === 'address') {
+      addressEndIdx = i
+    } else {
+      break
+    }
+  }
 
-  // Calculate max values across all frames, relative to address position
+  const addressFrame = addressPhaseIdx >= 0 ? phases[addressPhaseIdx] : null
+  const topFrame = topPhaseIdx >= 0 ? phases[topPhaseIdx] : null
+  const impactFrame = impactPhaseIdx >= 0 ? phases[impactPhaseIdx] : null
+  // followThroughFrame is only needed for its index, which we already have
+
+  // Get address landmarks for baseline - use array index, not frameIndex
+  const addressLandmarks = addressPhaseIdx >= 0
+    ? frames[addressPhaseIdx]?.landmarks
+    : frames[0]?.landmarks
+
   let maxHipRotation = 0
   let maxShoulderRotation = 0
   let maxXFactor = 0
 
-  for (const phase of phases) {
-    // Calculate rotation relative to address position using proper angular difference
-    const relativeHipRotation = angularDifference(phase.metrics.hipRotation, baselineHipRotation)
-    const relativeShoulderRotation = angularDifference(phase.metrics.shoulderRotation, baselineShoulderRotation)
-    // X-factor is the separation between shoulder and hip rotation at each frame
-    const relativeXFactor = relativeShoulderRotation - relativeHipRotation
+  // For rotation metrics, we measure at top of backswing (not max across all frames,
+  // which would include finish position where body is fully rotated)
+  const rotationEndIdx = impactPhaseIdx >= 0 ? impactPhaseIdx : phases.length
 
-    const absHipRotation = Math.abs(relativeHipRotation)
-    const absShoulderRotation = Math.abs(relativeShoulderRotation)
-    const absXFactor = Math.abs(relativeXFactor)
+  if (cameraAngle === 'face-on' && addressLandmarks) {
+    // Use width-based rotation for face-on (reliable)
+    // Only measure rotation from address through impact (not finish)
+    for (let i = 0; i < rotationEndIdx; i++) {
+      const frameLandmarks = frames[i]?.landmarks
+      if (!frameLandmarks) continue
 
-    if (absHipRotation > maxHipRotation) maxHipRotation = absHipRotation
-    if (absShoulderRotation > maxShoulderRotation) maxShoulderRotation = absShoulderRotation
-    if (absXFactor > maxXFactor) maxXFactor = absXFactor
+      const shoulderRotation = calculateRotationFromWidth(frameLandmarks, addressLandmarks, 'shoulders')
+      const hipRotation = calculateRotationFromWidth(frameLandmarks, addressLandmarks, 'hips')
+      const xFactor = Math.abs(shoulderRotation - hipRotation)
+
+      if (shoulderRotation > maxShoulderRotation) maxShoulderRotation = shoulderRotation
+      if (hipRotation > maxHipRotation) maxHipRotation = hipRotation
+      if (xFactor > maxXFactor) maxXFactor = xFactor
+    }
+  } else if (cameraAngle === 'dtl') {
+    // DTL: rotation metrics are unreliable, set to 0
+    maxHipRotation = 0
+    maxShoulderRotation = 0
+    maxXFactor = 0
+  } else {
+    // Oblique or unknown: use original Z-based calculation
+    const baselineHipRotation = addressFrame?.metrics.hipRotation ?? 0
+    const baselineShoulderRotation = addressFrame?.metrics.shoulderRotation ?? 0
+
+    for (const phase of phases) {
+      const relativeHipRotation = angularDifference(phase.metrics.hipRotation, baselineHipRotation)
+      const relativeShoulderRotation = angularDifference(phase.metrics.shoulderRotation, baselineShoulderRotation)
+      const relativeXFactor = relativeShoulderRotation - relativeHipRotation
+
+      const absHipRotation = Math.abs(relativeHipRotation)
+      const absShoulderRotation = Math.abs(relativeShoulderRotation)
+      const absXFactor = Math.abs(relativeXFactor)
+
+      if (absHipRotation > maxHipRotation) maxHipRotation = absHipRotation
+      if (absShoulderRotation > maxShoulderRotation) maxShoulderRotation = absShoulderRotation
+      if (absXFactor > maxXFactor) maxXFactor = absXFactor
+    }
   }
 
   // Determine lead arm based on handedness
@@ -69,6 +135,42 @@ function calculateSwingMetrics(
 
   const getLeadKneeFlex = (metrics: DetectedPhaseFrame['metrics']) => {
     return isRightHanded ? metrics.leftKneeFlex : metrics.rightKneeFlex
+  }
+
+  // Calculate face-on specific metrics
+  let hipSway: number | undefined
+  let headStability: number | undefined
+  let impactExtension: number | undefined
+
+  if (cameraAngle === 'face-on' && addressLandmarks) {
+    // Calculate hip sway and head stability from backswing through impact
+    // (not including address setup or follow-through)
+    const stabilityStartIdx = addressEndIdx + 1
+    const stabilityEndIdx = impactPhaseIdx >= 0 ? impactPhaseIdx + 1 : frames.length
+    const swingLandmarks = frames.slice(stabilityStartIdx, stabilityEndIdx).map(f => f.landmarks)
+    const addressPhaseLandmarks = frames.slice(0, addressEndIdx + 1).map(f => f.landmarks)
+
+    hipSway = calculateHipSway(swingLandmarks, addressLandmarks)
+    headStability = calculateHeadStability(swingLandmarks, addressPhaseLandmarks, addressLandmarks)
+
+    // Calculate impact extension - sample frames after impact
+    if (impactPhaseIdx >= 0) {
+      const impactLandmarks = frames[impactPhaseIdx]?.landmarks
+      // Sample 5 frames after impact for median calculation
+      const postImpactStart = impactPhaseIdx + 1
+      const postImpactEnd = Math.min(impactPhaseIdx + 6, frames.length)
+      const postImpactFrames = frames.slice(postImpactStart, postImpactEnd).map(f => f.landmarks)
+
+      if (impactLandmarks) {
+        impactExtension = calculateImpactExtension(impactLandmarks, postImpactFrames, isRightHanded)
+      }
+    }
+
+    logger.info('Face-on specific metrics:', {
+      hipSway: hipSway?.toFixed(2),
+      headStability: headStability?.toFixed(2),
+      impactExtension: impactExtension?.toFixed(2),
+    })
   }
 
   return {
@@ -82,6 +184,10 @@ function calculateSwingMetrics(
     impactLeadArmExtension: impactFrame ? getLeadArmExtension(impactFrame.metrics) : 180,
     addressKneeFlex: addressFrame ? getLeadKneeFlex(addressFrame.metrics) : 180,
     topKneeFlex: topFrame ? getLeadKneeFlex(topFrame.metrics) : 180,
+    // Face-on specific metrics
+    hipSway,
+    headStability,
+    impactExtension,
   }
 }
 
@@ -89,57 +195,135 @@ function calculateSwingMetrics(
  * Calculate overall swing score based on metrics
  * Weights are adjusted based on camera angle since rotation metrics
  * are unreliable for DTL (down-the-line) videos
+ * Face-on includes additional metrics: hip sway, head stability, impact extension
+ * Scoring ranges are adjusted based on club type (driver vs iron)
  */
 function calculateOverallScore(
   metrics: SwingMetrics,
   tempoScore: number,
-  cameraAngle: 'face-on' | 'dtl' | 'oblique'
+  cameraAngle: 'face-on' | 'dtl' | 'oblique',
+  clubType: ClubType
 ): number {
   const scores: number[] = []
 
-  // Adjust weights based on camera angle
-  // For DTL, rotation metrics are unreliable due to Z-coordinate noise
+  const isFaceOn = cameraAngle === 'face-on'
   const isDTL = cameraAngle === 'dtl'
 
-  // Weights for face-on vs DTL
-  const weights = isDTL ? {
-    xFactor: 0,        // Unreliable for DTL
-    shoulder: 0,       // Unreliable for DTL
-    hip: 0,            // Unreliable for DTL
-    spine: 0.30,       // Very reliable for DTL (side view shows spine clearly)
-    leadArm: 0.35,     // Very reliable for DTL
-    tempo: 0.35,       // Reliable for all angles
-  } : {
-    xFactor: 0.20,
-    shoulder: 0.15,
-    hip: 0.10,
-    spine: 0.15,
-    leadArm: 0.15,
-    tempo: 0.25,
-  }
+  // Select weights based on camera angle
+  const weights = isDTL
+    ? SCORING_WEIGHTS.DTL
+    : isFaceOn
+    ? SCORING_WEIGHTS.FACE_ON
+    : SCORING_WEIGHTS.OBLIQUE
 
-  // X-Factor score (ideal range: 35-55 degrees)
-  const xFactorScore = scoreInRange(metrics.maxXFactor, 35, 55, 20, 70)
+  // Get club-specific ranges, fall back to defaults for unknown
+  const clubRanges = clubType === 'driver'
+    ? CLUB_SCORING.DRIVER
+    : clubType === 'iron'
+    ? CLUB_SCORING.IRON
+    : null
+
+  // X-Factor score (use club-specific if available)
+  const xFactorRanges = clubRanges?.X_FACTOR ?? SCORING_RANGES.X_FACTOR
+  const xFactorScore = scoreInRange(
+    metrics.maxXFactor,
+    xFactorRanges.IDEAL_MIN,
+    xFactorRanges.IDEAL_MAX,
+    xFactorRanges.ABS_MIN,
+    xFactorRanges.ABS_MAX
+  )
   scores.push(xFactorScore * weights.xFactor)
 
-  // Shoulder rotation score (ideal: 80-100 degrees)
-  const shoulderScore = scoreInRange(metrics.maxShoulderRotation, 80, 100, 60, 120)
+  // Shoulder rotation score (use club-specific if available)
+  const defaultShoulderRanges = isFaceOn ? SCORING_RANGES.SHOULDER.FACE_ON : SCORING_RANGES.SHOULDER.DEFAULT
+  const clubShoulderRanges = clubRanges
+    ? (isFaceOn ? clubRanges.SHOULDER.FACE_ON : clubRanges.SHOULDER.DEFAULT)
+    : null
+  const shoulderRanges = clubShoulderRanges ?? defaultShoulderRanges
+  const shoulderScore = scoreInRange(
+    metrics.maxShoulderRotation,
+    shoulderRanges.IDEAL_MIN,
+    shoulderRanges.IDEAL_MAX,
+    shoulderRanges.ABS_MIN,
+    shoulderRanges.ABS_MAX
+  )
   scores.push(shoulderScore * weights.shoulder)
 
-  // Hip rotation score (ideal: 40-55 degrees)
-  const hipScore = scoreInRange(metrics.maxHipRotation, 40, 55, 25, 70)
+  // Hip rotation score (use club-specific if available)
+  const defaultHipRanges = isFaceOn ? SCORING_RANGES.HIP.FACE_ON : SCORING_RANGES.HIP.DEFAULT
+  const clubHipRanges = clubRanges
+    ? (isFaceOn ? clubRanges.HIP.FACE_ON : clubRanges.HIP.DEFAULT)
+    : null
+  const hipRanges = clubHipRanges ?? defaultHipRanges
+  const hipScore = scoreInRange(
+    metrics.maxHipRotation,
+    hipRanges.IDEAL_MIN,
+    hipRanges.IDEAL_MAX,
+    hipRanges.ABS_MIN,
+    hipRanges.ABS_MAX
+  )
   scores.push(hipScore * weights.hip)
 
-  // Spine angle consistency (should be similar at address and impact)
-  const spineConsistency = 100 - Math.min(100, Math.abs(metrics.addressSpineAngle - metrics.impactSpineAngle) * 3)
+  // Spine angle consistency
+  const spineTolerance = isFaceOn
+    ? SCORING_RANGES.SPINE_TOLERANCE.FACE_ON
+    : SCORING_RANGES.SPINE_TOLERANCE.DEFAULT
+  const spineConsistency = 100 - Math.min(100, Math.abs(metrics.addressSpineAngle - metrics.impactSpineAngle) * spineTolerance)
   scores.push(spineConsistency * weights.spine)
 
-  // Lead arm extension at top (ideal: 160-180 degrees = straight arm)
-  const leadArmScore = scoreInRange(metrics.topLeadArmExtension, 160, 180, 120, 180)
+  // Lead arm extension at top (use club-specific if available)
+  const defaultLeadArmRanges = isFaceOn ? SCORING_RANGES.LEAD_ARM.FACE_ON : SCORING_RANGES.LEAD_ARM.DEFAULT
+  const clubLeadArmRanges = clubRanges
+    ? (isFaceOn ? clubRanges.LEAD_ARM.FACE_ON : clubRanges.LEAD_ARM.DEFAULT)
+    : null
+  const leadArmRanges = clubLeadArmRanges ?? defaultLeadArmRanges
+  const leadArmScore = scoreInRange(
+    metrics.topLeadArmExtension,
+    leadArmRanges.IDEAL_MIN,
+    leadArmRanges.IDEAL_MAX,
+    leadArmRanges.ABS_MIN,
+    leadArmRanges.ABS_MAX
+  )
   scores.push(leadArmScore * weights.leadArm)
 
   // Tempo score
   scores.push(tempoScore * weights.tempo)
+
+  // Face-on specific metrics
+  if (isFaceOn) {
+    // Hip sway score (lower is better)
+    const hipSwayValue = metrics.hipSway ?? DEFAULTS.HIP_SWAY
+    const hipSwayScore = scoreInRange(
+      1 - hipSwayValue,
+      SCORING_RANGES.HIP_SWAY.IDEAL_MIN,
+      SCORING_RANGES.HIP_SWAY.IDEAL_MAX,
+      SCORING_RANGES.HIP_SWAY.ABS_MIN,
+      SCORING_RANGES.HIP_SWAY.ABS_MAX
+    )
+    scores.push(hipSwayScore * weights.hipSway)
+
+    // Head stability score (lower is better)
+    const headStabilityValue = metrics.headStability ?? DEFAULTS.HEAD_STABILITY
+    const headStabilityScore = scoreInRange(
+      1 - headStabilityValue,
+      SCORING_RANGES.HEAD_STABILITY.IDEAL_MIN,
+      SCORING_RANGES.HEAD_STABILITY.IDEAL_MAX,
+      SCORING_RANGES.HEAD_STABILITY.ABS_MIN,
+      SCORING_RANGES.HEAD_STABILITY.ABS_MAX
+    )
+    scores.push(headStabilityScore * weights.headStability)
+
+    // Impact extension score (higher is better)
+    const impactExtensionValue = metrics.impactExtension ?? DEFAULTS.IMPACT_EXTENSION
+    const impactExtensionScore = scoreInRange(
+      impactExtensionValue,
+      SCORING_RANGES.IMPACT_EXTENSION.IDEAL_MIN,
+      SCORING_RANGES.IMPACT_EXTENSION.IDEAL_MAX,
+      SCORING_RANGES.IMPACT_EXTENSION.ABS_MIN,
+      SCORING_RANGES.IMPACT_EXTENSION.ABS_MAX
+    )
+    scores.push(impactExtensionScore * weights.impactExtension)
+  }
 
   return Math.round(scores.reduce((a, b) => a + b, 0))
 }
@@ -170,6 +354,26 @@ function scoreInRange(
 }
 
 /**
+ * Calculate score penalty based on detected swing mistakes
+ * Higher severity and confidence = higher penalty
+ * Capped to prevent excessive deductions
+ */
+function calculateMistakePenalty(detectedMistakes: DetectorResult[]): number {
+  if (!detectedMistakes || detectedMistakes.length === 0) return 0
+
+  let totalPenalty = 0
+  for (const mistake of detectedMistakes) {
+    // Severity tiers: High (70+) = 5pts, Medium (40-69) = 3pts, Low (<40) = 1pt
+    const basePenalty = mistake.severity >= 70 ? 5 : mistake.severity >= 40 ? 3 : 1
+    // Weight by detection confidence
+    totalPenalty += basePenalty * mistake.confidence
+  }
+
+  // Cap at 25 points to prevent crushing scores
+  return Math.min(25, Math.round(totalPenalty))
+}
+
+/**
  * Main function to analyze a complete golf swing
  */
 export function analyzeSwing(
@@ -184,7 +388,7 @@ export function analyzeSwing(
     ratio: cameraAngleResult.ratio.toFixed(2),
   })
 
-  // Detect swing phases
+  // Detect swing phases first (needed for address phase detection)
   const phaseResult = detectSwingPhases(frames)
 
   // Log key frame indices for debugging consistency
@@ -196,6 +400,37 @@ export function analyzeSwing(
     totalFrames: frames.length,
   })
 
+  // Detect club type from address phase frames (more stable than first 5 frames)
+  // Find the end of address phase from the phases array
+  let addressPhaseEndIdx = 0
+  for (let i = 0; i < phaseResult.phases.length; i++) {
+    if (phaseResult.phases[i].phase === 'address') {
+      addressPhaseEndIdx = i
+    } else {
+      break // Address phase is contiguous from start
+    }
+  }
+
+  // Sample frames from the middle/end of address phase when golfer is settled
+  const sampleEndIdx = addressPhaseEndIdx
+  const sampleStartIdx = Math.max(0, sampleEndIdx - 10)
+  const addressFrames = frames.slice(sampleStartIdx, sampleEndIdx + 1).map(f => f.landmarks)
+
+  // Fall back to first frames if address phase is too short
+  const clubDetectionFrames = addressFrames.length >= 3
+    ? addressFrames
+    : frames.map(f => f.landmarks)
+
+  const clubTypeResult = detectClubTypeFromFrames(clubDetectionFrames, cameraAngleResult.angle)
+  logger.info('Club Type Detection:', {
+    clubType: clubTypeResult.clubType,
+    confidence: clubTypeResult.confidence.toFixed(2),
+    stanceRatio: clubTypeResult.signals.stanceRatio.toFixed(2),
+    handDistance: clubTypeResult.signals.handDistance.toFixed(2),
+    spineAngle: clubTypeResult.signals.spineAngle.toFixed(1),
+    sampledFrames: `${sampleStartIdx}-${sampleEndIdx}`,
+  })
+
   // Consolidate phases into segments
   const phaseSegments: PhaseSegment[] = consolidatePhases(phaseResult.phases)
 
@@ -203,8 +438,13 @@ export function analyzeSwing(
   const tempo = calculateTempoMetrics(phaseSegments)
   const tempoEvaluation = evaluateTempo(tempo)
 
-  // Calculate swing metrics
-  const metrics = calculateSwingMetrics(phaseResult.phases, phaseResult.isRightHanded)
+  // Calculate swing metrics (now with camera angle for proper rotation calculation)
+  const metrics = calculateSwingMetrics(
+    phaseResult.phases,
+    frames,
+    phaseResult.isRightHanded,
+    cameraAngleResult.angle
+  )
 
   // Log normalized swing metrics for debugging
   logger.info('Swing Metrics (normalized to address):', {
@@ -215,8 +455,34 @@ export function analyzeSwing(
     impactSpineAngle: metrics.impactSpineAngle.toFixed(1),
   })
 
-  // Calculate overall score (weights adjusted based on camera angle)
-  const overallScore = calculateOverallScore(metrics, tempoEvaluation.score, cameraAngleResult.angle)
+  // Run modular mistake detectors
+  const detectorInput: DetectorInput = {
+    frames,
+    phaseSegments,
+    metrics,
+    tempo,
+    isRightHanded: phaseResult.isRightHanded,
+    cameraAngle: cameraAngleResult.angle,
+    clubType: clubTypeResult.clubType,
+  }
+  const detectedMistakes = getDetectedMistakes(detectorInput)
+
+  logger.info('Detected Mistakes:', {
+    count: detectedMistakes.length,
+    mistakes: detectedMistakes.map(m => ({ id: m.mistakeId, severity: m.severity })),
+  })
+
+  // Calculate overall score with mistake penalty
+  const baseScore = calculateOverallScore(metrics, tempoEvaluation.score, cameraAngleResult.angle, clubTypeResult.clubType)
+  const mistakePenalty = calculateMistakePenalty(detectedMistakes)
+  const overallScore = Math.max(0, baseScore - mistakePenalty)
+
+  logger.info('Score Calculation:', {
+    baseScore,
+    mistakePenalty,
+    overallScore,
+    mistakeCount: detectedMistakes.length,
+  })
 
   return {
     id: generateId(),
@@ -230,6 +496,9 @@ export function analyzeSwing(
     overallScore,
     cameraAngle: cameraAngleResult.angle,
     cameraAngleConfidence: cameraAngleResult.confidence,
+    clubType: clubTypeResult.clubType,
+    clubTypeConfidence: clubTypeResult.confidence,
+    detectedMistakes,
   }
 }
 
@@ -237,7 +506,7 @@ export function analyzeSwing(
  * Get feedback messages based on analysis results
  */
 export interface SwingFeedback {
-  category: 'rotation' | 'tempo' | 'posture' | 'arm' | 'general'
+  category: 'rotation' | 'tempo' | 'posture' | 'arm' | 'general' | 'balance' | 'stability' | 'extension'
   type: 'positive' | 'suggestion' | 'warning'
   message: string
 }
@@ -245,16 +514,19 @@ export interface SwingFeedback {
 export function generateSwingFeedback(result: AnalysisResult): SwingFeedback[] {
   const feedback: SwingFeedback[] = []
   const isDTL = result.cameraAngle === 'dtl'
+  const isFaceOn = result.cameraAngle === 'face-on'
 
-  // X-Factor feedback (skip for DTL - rotation metrics unreliable from side view)
+  // X-Factor feedback (skip for DTL - rotation metrics unreliable from down-the-line view)
+  // For face-on, use wider ideal range (35-65°) for pro swings
   if (!isDTL) {
-    if (result.metrics.maxXFactor >= 35 && result.metrics.maxXFactor <= 55) {
+    if (result.metrics.maxXFactor >= SCORING_RANGES.X_FACTOR.IDEAL_MIN &&
+        result.metrics.maxXFactor <= SCORING_RANGES.X_FACTOR.IDEAL_MAX) {
       feedback.push({
         category: 'rotation',
         type: 'positive',
         message: `Great X-factor of ${Math.round(result.metrics.maxXFactor)}°. Good separation between shoulders and hips.`,
       })
-    } else if (result.metrics.maxXFactor < 35) {
+    } else if (result.metrics.maxXFactor < SCORING_RANGES.X_FACTOR.IDEAL_MIN) {
       feedback.push({
         category: 'rotation',
         type: 'suggestion',
@@ -271,13 +543,17 @@ export function generateSwingFeedback(result: AnalysisResult): SwingFeedback[] {
 
   // Spine angle consistency
   const spineDiff = Math.abs(result.metrics.addressSpineAngle - result.metrics.impactSpineAngle)
-  if (spineDiff < 5) {
+  const spineThresholds = isFaceOn ? FEEDBACK_THRESHOLDS.SPINE_DIFF.FACE_ON : FEEDBACK_THRESHOLDS.SPINE_DIFF.DEFAULT
+
+  if (spineDiff < spineThresholds.GOOD) {
     feedback.push({
       category: 'posture',
       type: 'positive',
-      message: 'Excellent posture maintenance through the swing.',
+      message: isFaceOn
+        ? 'Good spine dynamics with appropriate secondary tilt at impact.'
+        : 'Excellent posture maintenance through the swing.',
     })
-  } else if (spineDiff < 10) {
+  } else if (spineDiff < spineThresholds.WARNING) {
     feedback.push({
       category: 'posture',
       type: 'suggestion',
@@ -292,13 +568,15 @@ export function generateSwingFeedback(result: AnalysisResult): SwingFeedback[] {
   }
 
   // Lead arm at top
-  if (result.metrics.topLeadArmExtension >= 160) {
+  const leadArmThresholds = isFaceOn ? FEEDBACK_THRESHOLDS.LEAD_ARM.FACE_ON : FEEDBACK_THRESHOLDS.LEAD_ARM.DEFAULT
+
+  if (result.metrics.topLeadArmExtension >= leadArmThresholds.GOOD) {
     feedback.push({
       category: 'arm',
       type: 'positive',
       message: 'Good lead arm extension at the top of the backswing.',
     })
-  } else if (result.metrics.topLeadArmExtension >= 140) {
+  } else if (result.metrics.topLeadArmExtension >= leadArmThresholds.OK) {
     feedback.push({
       category: 'arm',
       type: 'suggestion',
@@ -319,6 +597,78 @@ export function generateSwingFeedback(result: AnalysisResult): SwingFeedback[] {
     type: tempoEval.rating === 'excellent' || tempoEval.rating === 'good' ? 'positive' : 'suggestion',
     message: tempoEval.feedback,
   })
+
+  // Face-on specific feedback
+  if (isFaceOn) {
+    // Hip sway feedback (lower is better)
+    if (result.metrics.hipSway !== undefined) {
+      if (result.metrics.hipSway < FEEDBACK_THRESHOLDS.HIP_SWAY.GOOD) {
+        feedback.push({
+          category: 'balance',
+          type: 'positive',
+          message: 'Good hip stability with controlled lateral movement.',
+        })
+      } else if (result.metrics.hipSway < FEEDBACK_THRESHOLDS.HIP_SWAY.OK) {
+        feedback.push({
+          category: 'balance',
+          type: 'suggestion',
+          message: 'Some hip sway detected. Focus on rotating around your spine rather than sliding laterally.',
+        })
+      } else {
+        feedback.push({
+          category: 'balance',
+          type: 'warning',
+          message: 'Excessive hip sway. Work on keeping your lower body more stable during the swing.',
+        })
+      }
+    }
+
+    // Head stability feedback (lower is better)
+    if (result.metrics.headStability !== undefined) {
+      if (result.metrics.headStability < FEEDBACK_THRESHOLDS.HEAD_STABILITY.GOOD) {
+        feedback.push({
+          category: 'stability',
+          type: 'positive',
+          message: 'Good head stability throughout the swing.',
+        })
+      } else if (result.metrics.headStability < FEEDBACK_THRESHOLDS.HEAD_STABILITY.OK) {
+        feedback.push({
+          category: 'stability',
+          type: 'suggestion',
+          message: 'Minor head movement detected. Try to keep your head steadier for more consistent contact.',
+        })
+      } else {
+        feedback.push({
+          category: 'stability',
+          type: 'warning',
+          message: 'Significant head movement during swing. Focus on keeping your head still for better consistency.',
+        })
+      }
+    }
+
+    // Impact extension feedback (higher is better)
+    if (result.metrics.impactExtension !== undefined) {
+      if (result.metrics.impactExtension >= FEEDBACK_THRESHOLDS.IMPACT_EXTENSION.GOOD) {
+        feedback.push({
+          category: 'extension',
+          type: 'positive',
+          message: 'Excellent arm extension through impact.',
+        })
+      } else if (result.metrics.impactExtension >= FEEDBACK_THRESHOLDS.IMPACT_EXTENSION.OK) {
+        feedback.push({
+          category: 'extension',
+          type: 'suggestion',
+          message: 'Could improve extension through impact. Focus on reaching toward the target post-impact.',
+        })
+      } else {
+        feedback.push({
+          category: 'extension',
+          type: 'warning',
+          message: 'Limited extension through impact. Work on releasing the club fully toward the target.',
+        })
+      }
+    }
+  }
 
   return feedback
 }

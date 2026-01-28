@@ -1,19 +1,17 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { del, keys } from 'idb-keyval'
 import { VideoUploader } from '@/components/VideoUploader'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { AnalysisProgress } from '@/components/AnalysisProgress'
 import { SwingResults } from '@/components/SwingResults'
 import { SwingTimeline } from '@/components/SwingTimeline'
-import { HistoryPanel } from '@/components/HistoryPanel'
 import { useVideoStorage } from '@/hooks/useVideoStorage'
 import { useSwingAnalysis } from '@/hooks/useSwingAnalysis'
-import { useAnalysisHistory } from '@/hooks/useAnalysisHistory'
 import { useAutoAnalyze } from '@/hooks/useAutoAnalyze'
 import { analyzeSwing } from '@/utils/swingAnalyzer'
 import { logger } from '@/utils/debugLogger'
 import type { VideoFile } from '@/types/video'
 import type { AnalysisResult } from '@/types/analysis'
-import type { SavedAnalysis } from '@/hooks/useAnalysisHistory'
 
 type AppState = 'upload' | 'player' | 'analyzing' | 'results'
 
@@ -29,7 +27,28 @@ function App() {
 
   const { saveVideo, getVideoUrl, revokeVideoUrl } = useVideoStorage()
   const { progress, startAnalysis, cancelAnalysis } = useSwingAnalysis()
-  const { history, isLoading: historyLoading, saveAnalysis, deleteAnalysis } = useAnalysisHistory()
+
+  // One-time cleanup of old analysis history from IndexedDB
+  useEffect(() => {
+    const cleanupOldAnalyses = async () => {
+      try {
+        const allKeys = await keys()
+        const analysisKeys = allKeys.filter(
+          (key) => typeof key === 'string' && key.startsWith('analysis_')
+        )
+        if (analysisKeys.length > 0) {
+          logger.info(`Cleaning up ${analysisKeys.length} old analyses from IndexedDB`)
+          for (const key of analysisKeys) {
+            await del(key)
+          }
+          logger.info('Cleanup complete')
+        }
+      } catch (error) {
+        logger.error('Failed to cleanup old analyses:', error)
+      }
+    }
+    cleanupOldAnalyses()
+  }, [])
 
   // Track video duration
   useEffect(() => {
@@ -133,9 +152,6 @@ function App() {
 
         setAnalysisResult(result)
         setAppState('results')
-
-        // Save to history
-        await saveAnalysis(result, currentVideo.name)
       } else {
         // Analysis was cancelled or failed
         logger.warn('No frames returned, going back to player')
@@ -145,7 +161,7 @@ function App() {
       logger.error('handleAnalyze error:', err instanceof Error ? { message: err.message, stack: err.stack } : err)
       setAppState('player')
     }
-  }, [startAnalysis, currentVideo, saveAnalysis])
+  }, [startAnalysis, currentVideo])
 
   const handleCancelAnalysis = useCallback(() => {
     cancelAnalysis()
@@ -164,14 +180,6 @@ function App() {
     if (videoRef.current) {
       videoRef.current.currentTime = time
     }
-  }, [])
-
-  const handleSelectFromHistory = useCallback((savedAnalysis: SavedAnalysis) => {
-    // Load the saved analysis result (video not available, just show results)
-    setAnalysisResult(savedAnalysis.result)
-    setVideoUrl(null)
-    setCurrentVideo(null)
-    setAppState('results')
   }, [])
 
   // Auto-load video from URL params (dev mode only)
@@ -195,15 +203,7 @@ function App() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         {appState === 'upload' && (
-          <div className="space-y-8">
-            <VideoUploader onVideoSelect={handleVideoSelect} />
-            <HistoryPanel
-              history={history}
-              isLoading={historyLoading}
-              onSelect={handleSelectFromHistory}
-              onDelete={deleteAnalysis}
-            />
-          </div>
+          <VideoUploader onVideoSelect={handleVideoSelect} />
         )}
 
         {(appState === 'player' || appState === 'analyzing') && videoUrl && (

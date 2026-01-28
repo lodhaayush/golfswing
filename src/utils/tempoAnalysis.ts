@@ -131,9 +131,9 @@ export function evaluateTempo(tempo: TempoMetrics): TempoEvaluation {
     rating = 'needs-work'
     score = 70 - (logDifference - 0.25) * 60
     if (actualRatio < idealRatio) {
-      feedback = 'Your backswing is too quick. Try slowing down your takeaway.'
+      feedback = 'Your backswing is too quick relative to your downswing. Try slowing down your takeaway.'
     } else {
-      feedback = 'Your downswing is relatively slow. Focus on accelerating through the ball.'
+      feedback = 'Your backswing is slow relative to your downswing. Try a slightly quicker takeaway for better rhythm.'
     }
   } else {
     rating = 'poor'
@@ -142,7 +142,7 @@ export function evaluateTempo(tempo: TempoMetrics): TempoEvaluation {
     if (actualRatio < idealRatio) {
       feedback = 'Rushing your backswing significantly. Practice a slower, smoother takeaway.'
     } else {
-      feedback = 'Unusual tempo detected. This may indicate slow-motion video or phase detection limits.'
+      feedback = 'Your backswing is very slow relative to downswing. This may indicate phase detection issues or unusual swing timing.'
     }
   }
 

@@ -1,13 +1,16 @@
-import { TrendingUp, TrendingDown, Minus, Clock, RotateCw, User, Zap, Camera } from 'lucide-react'
-import type { AnalysisResult } from '@/types/analysis'
+import { Clock, RotateCw, User, Zap, Camera, Target, Edit2, AlertTriangle, CheckCircle } from 'lucide-react'
+import { useState } from 'react'
+import type { AnalysisResult, ClubType } from '@/types/analysis'
 import type { CameraAngle } from '@/utils/angleCalculations'
 import { formatTempoRatio, formatDuration, evaluateTempo } from '@/utils/tempoAnalysis'
-import { generateSwingFeedback, type SwingFeedback } from '@/utils/swingAnalyzer'
+import type { DetectorResult } from '@/utils/detectors/types'
+import { getCategoryFromMistakeId } from '@/utils/detectors/types'
 
 interface SwingResultsProps {
   result: AnalysisResult
   onBackToPlayer?: () => void
   onUploadNew?: () => void
+  onClubTypeChange?: (clubType: ClubType) => void
 }
 
 function MetricCard({
@@ -38,23 +41,36 @@ function MetricCard({
   )
 }
 
-function FeedbackItem({ feedback }: { feedback: SwingFeedback }) {
-  const icons = {
-    positive: <TrendingUp className="w-4 h-4 text-green-400" />,
-    suggestion: <Minus className="w-4 h-4 text-yellow-400" />,
-    warning: <TrendingDown className="w-4 h-4 text-red-400" />,
-  }
+function getSeverityColor(severity: number): string {
+  if (severity >= 70) return 'text-red-400'
+  if (severity >= 40) return 'text-yellow-400'
+  return 'text-orange-400'
+}
 
-  const bgColors = {
-    positive: 'bg-green-900/30 border-green-800',
-    suggestion: 'bg-yellow-900/30 border-yellow-800',
-    warning: 'bg-red-900/30 border-red-800',
-  }
+function getSeverityBgColor(severity: number): string {
+  if (severity >= 70) return 'bg-red-900/30 border-red-800'
+  if (severity >= 40) return 'bg-yellow-900/30 border-yellow-800'
+  return 'bg-orange-900/30 border-orange-800'
+}
+
+function formatMistakeId(id: string): string {
+  return id
+    .split('_')
+    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
+function DetectedMistakeItem({ mistake }: { mistake: DetectorResult }) {
+  const category = getCategoryFromMistakeId(mistake.mistakeId)
 
   return (
-    <div className={`flex items-start gap-3 p-3 rounded-lg border ${bgColors[feedback.type]}`}>
-      <div className="mt-0.5">{icons[feedback.type]}</div>
-      <p className="text-sm text-gray-300">{feedback.message}</p>
+    <div className={`p-4 rounded-lg border ${getSeverityBgColor(mistake.severity)}`}>
+      <div className="flex items-center gap-2 mb-1">
+        <AlertTriangle className={`w-4 h-4 ${getSeverityColor(mistake.severity)}`} />
+        <span className="font-medium text-white">{formatMistakeId(mistake.mistakeId)}</span>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400 capitalize">{category}</span>
+      </div>
+      <p className="text-sm text-gray-300 mt-1">{mistake.message}</p>
     </div>
   )
 }
@@ -93,10 +109,31 @@ function getCameraAngleLabel(angle: CameraAngle): string {
   }
 }
 
-export function SwingResults({ result, onBackToPlayer, onUploadNew }: SwingResultsProps) {
-  const feedback = generateSwingFeedback(result)
+function getClubTypeLabel(clubType: ClubType): string {
+  switch (clubType) {
+    case 'driver':
+      return 'Driver'
+    case 'iron':
+      return 'Iron'
+    case 'unknown':
+      return 'Unknown'
+  }
+}
+
+export function SwingResults({ result, onBackToPlayer, onUploadNew, onClubTypeChange }: SwingResultsProps) {
   const tempoEval = evaluateTempo(result.tempo)
   const isDTL = result.cameraAngle === 'dtl'
+  const isFaceOn = result.cameraAngle === 'face-on'
+  const [isEditingClub, setIsEditingClub] = useState(false)
+  const [selectedClub, setSelectedClub] = useState<ClubType>(result.clubType)
+
+  const handleClubChange = (newClubType: ClubType) => {
+    setSelectedClub(newClubType)
+    setIsEditingClub(false)
+    if (onClubTypeChange) {
+      onClubTypeChange(newClubType)
+    }
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
@@ -128,6 +165,50 @@ export function SwingResults({ result, onBackToPlayer, onUploadNew }: SwingResul
               <span className="text-red-500 text-xs">(low confidence)</span>
             )}
           </div>
+          <div className="text-gray-600">|</div>
+          <div className="flex items-center gap-1.5">
+            <Target className="w-4 h-4" />
+            {!isEditingClub ? (
+              <>
+                <span>{getClubTypeLabel(selectedClub)}</span>
+                {result.clubTypeConfidence >= 0.8 && (
+                  <span className="text-green-500 text-xs">(high confidence)</span>
+                )}
+                {result.clubTypeConfidence < 0.8 && result.clubTypeConfidence >= 0.6 && (
+                  <span className="text-yellow-500 text-xs">(medium confidence)</span>
+                )}
+                {result.clubTypeConfidence < 0.6 && (
+                  <span className="text-gray-500 text-xs">(low confidence)</span>
+                )}
+                <button
+                  onClick={() => setIsEditingClub(true)}
+                  className="ml-1 p-1 hover:bg-gray-700 rounded transition-colors"
+                  title="Change club type"
+                >
+                  <Edit2 className="w-3 h-3 text-gray-400" />
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedClub}
+                  onChange={(e) => handleClubChange(e.target.value as ClubType)}
+                  className="px-2 py-1 bg-gray-700 text-white text-sm rounded border border-gray-600 focus:outline-none focus:border-green-500"
+                  autoFocus
+                >
+                  <option value="driver">Driver</option>
+                  <option value="iron">Iron</option>
+                  <option value="unknown">Unknown</option>
+                </select>
+                <button
+                  onClick={() => setIsEditingClub(false)}
+                  className="text-xs text-gray-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -137,7 +218,7 @@ export function SwingResults({ result, onBackToPlayer, onUploadNew }: SwingResul
           <RotateCw className="w-5 h-5 text-blue-400" />
           Rotation Metrics
           {isDTL && (
-            <span className="text-xs font-normal text-gray-500 ml-2">(limited accuracy for side view)</span>
+            <span className="text-xs font-normal text-gray-500 ml-2">(limited accuracy for down-the-line view)</span>
           )}
         </h2>
         {isDTL && (
@@ -150,7 +231,7 @@ export function SwingResults({ result, onBackToPlayer, onUploadNew }: SwingResul
             label="X-Factor"
             value={result.metrics.maxXFactor}
             unit="°"
-            ideal="35-55°"
+            ideal="35-65°"
             description="Shoulder-hip separation"
             unreliable={isDTL}
           />
@@ -158,14 +239,14 @@ export function SwingResults({ result, onBackToPlayer, onUploadNew }: SwingResul
             label="Shoulder Turn"
             value={result.metrics.maxShoulderRotation}
             unit="°"
-            ideal="80-100°"
+            ideal={isFaceOn ? "55-95°" : "80-110°"}
             unreliable={isDTL}
           />
           <MetricCard
             label="Hip Turn"
             value={result.metrics.maxHipRotation}
             unit="°"
-            ideal="40-55°"
+            ideal={isFaceOn ? "25-55°" : "40-60°"}
             unreliable={isDTL}
           />
         </div>
@@ -204,38 +285,106 @@ export function SwingResults({ result, onBackToPlayer, onUploadNew }: SwingResul
         <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
           <User className="w-5 h-5 text-orange-400" />
           Posture & Arm Position
+          {isFaceOn && (
+            <span className="text-xs font-normal text-gray-500 ml-2">(spine shows lateral tilt in face-on view)</span>
+          )}
         </h2>
+        {isFaceOn && (
+          <div className="mb-4 px-3 py-2 bg-gray-700/50 rounded-lg text-sm text-gray-400">
+            Spine angle in face-on view measures lateral tilt (side bend), not forward bend. Some change is normal for driver swings.
+          </div>
+        )}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <MetricCard
             label="Address Spine Angle"
             value={result.metrics.addressSpineAngle}
             unit="°"
+            description={isFaceOn ? "Lateral tilt" : undefined}
+            unreliable={isFaceOn}
           />
           <MetricCard
             label="Impact Spine Angle"
             value={result.metrics.impactSpineAngle}
             unit="°"
-            description="Should match address"
+            description={isFaceOn ? "Lateral tilt (some change normal)" : "Should match address"}
+            unreliable={isFaceOn}
           />
           <MetricCard
             label="Lead Arm at Top"
             value={result.metrics.topLeadArmExtension}
             unit="°"
-            ideal="160-180°"
-            description="Straighter is better"
+            ideal={isFaceOn ? "140-180°" : "160-180°"}
+            description={isFaceOn ? "Perspective may affect reading" : "Straighter is better"}
           />
         </div>
       </div>
 
-      {/* Feedback Section */}
-      <div className="bg-gray-800 rounded-xl p-6">
-        <h2 className="text-xl font-bold text-white mb-4">Swing Feedback</h2>
-        <div className="space-y-3">
-          {feedback.map((item, index) => (
-            <FeedbackItem key={index} feedback={item} />
-          ))}
+      {/* Face-On Specific Metrics - only shown for face-on camera angle */}
+      {isFaceOn && (result.metrics.hipSway !== undefined || result.metrics.headStability !== undefined || result.metrics.impactExtension !== undefined) && (
+        <div className="bg-gray-800 rounded-xl p-6">
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <Target className="w-5 h-5 text-cyan-400" />
+            Balance & Extension
+            <span className="text-xs font-normal text-gray-500 ml-2">(face-on view analysis)</span>
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {result.metrics.hipSway !== undefined && (
+              <MetricCard
+                label="Hip Sway"
+                value={`${Math.round((1 - result.metrics.hipSway) * 100)}%`}
+                description="Higher = more stable"
+              />
+            )}
+            {result.metrics.headStability !== undefined && (
+              <MetricCard
+                label="Head Stability"
+                value={`${Math.round((1 - result.metrics.headStability) * 100)}%`}
+                description="Higher = steadier head"
+              />
+            )}
+            {result.metrics.impactExtension !== undefined && (
+              <MetricCard
+                label="Impact Extension"
+                value={`${Math.round(result.metrics.impactExtension * 100)}%`}
+                description="Arm reach through impact"
+              />
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Detected Issues Section */}
+      {result.detectedMistakes && result.detectedMistakes.length > 0 && (
+        <div className="bg-gray-800 rounded-xl p-6">
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-yellow-400" />
+            Detected Issues
+            <span className="text-sm font-normal text-gray-500 ml-2">
+              ({result.detectedMistakes.length} found)
+            </span>
+          </h2>
+          <div className="space-y-3">
+            {result.detectedMistakes
+              .sort((a, b) => b.severity - a.severity)
+              .map((mistake, index) => (
+                <DetectedMistakeItem key={index} mistake={mistake} />
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* No Issues Found */}
+      {result.detectedMistakes && result.detectedMistakes.length === 0 && (
+        <div className="bg-gray-800 rounded-xl p-6">
+          <div className="flex items-center gap-3 text-green-400">
+            <CheckCircle className="w-6 h-6" />
+            <span className="text-lg font-medium">No major swing issues detected!</span>
+          </div>
+          <p className="text-gray-400 text-sm mt-2">
+            Your swing mechanics look solid. Keep practicing to maintain consistency.
+          </p>
+        </div>
+      )}
 
       {/* Action Buttons */}
       <div className="flex items-center justify-center gap-4 pt-4">

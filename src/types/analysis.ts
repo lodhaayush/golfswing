@@ -1,5 +1,9 @@
 import type { PoseFrame } from './pose'
 import type { CameraAngle } from '@/utils/angleCalculations'
+import type { DetectorResult } from '@/utils/detectors/types'
+
+// Club type detected from pose analysis
+export type ClubType = 'driver' | 'iron' | 'unknown'
 
 // Simple phase identifier for each frame
 export type SwingPhase =
@@ -39,6 +43,11 @@ export interface SwingMetrics {
   // Knee flex
   addressKneeFlex: number
   topKneeFlex: number
+
+  // Face-on specific metrics (optional, only populated for face-on camera angle)
+  hipSway?: number           // Normalized hip sway (0-1 scale, lower is better)
+  headStability?: number     // Normalized head movement (0-1, lower is better)
+  impactExtension?: number   // Arm extension through impact (0-1, higher is better)
 }
 
 export interface TempoMetrics {
@@ -60,4 +69,7 @@ export interface AnalysisResult {
   overallScore: number
   cameraAngle: CameraAngle
   cameraAngleConfidence: number
+  clubType: ClubType
+  clubTypeConfidence: number
+  detectedMistakes?: DetectorResult[]
 }

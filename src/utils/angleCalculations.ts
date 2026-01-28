@@ -1,5 +1,8 @@
 import type { Landmark } from '@/types/pose'
 import { POSE_LANDMARKS } from '@/types/pose'
+import type { ClubType } from '@/types/analysis'
+import { CAMERA_ANGLE_DETECTION, CLUB_DETECTION } from './constants'
+import { logger } from './debugLogger'
 
 /**
  * Calculate the angle between three points in 2D (ignoring z-coordinate)
@@ -100,6 +103,266 @@ export function calculateXFactor(landmarks: Landmark[]): number {
   const shoulderRotation = calculateShoulderRotation(landmarks)
   const hipRotation = calculateHipRotation(landmarks)
   return shoulderRotation - hipRotation
+}
+
+/**
+ * Calculate the horizontal width (X-distance) between two body parts
+ * Used for face-on rotation detection via width narrowing
+ */
+export function calculateBodyWidth(
+  landmarks: Landmark[],
+  bodyPart: 'shoulders' | 'hips'
+): number {
+  const leftIdx = bodyPart === 'shoulders' ? POSE_LANDMARKS.LEFT_SHOULDER : POSE_LANDMARKS.LEFT_HIP
+  const rightIdx = bodyPart === 'shoulders' ? POSE_LANDMARKS.RIGHT_SHOULDER : POSE_LANDMARKS.RIGHT_HIP
+
+  const left = landmarks[leftIdx]
+  const right = landmarks[rightIdx]
+
+  if (!left || !right) return 0
+
+  return Math.abs(right.x - left.x)
+}
+
+/**
+ * Calculate rotation angle for face-on video using width narrowing
+ *
+ * When a golfer rotates away from the camera:
+ * - Shoulder/hip width appears to narrow
+ * - At 90° rotation, width approaches zero (seen edge-on)
+ * - Formula: rotation = acos(currentWidth / addressWidth) × (180/π)
+ *
+ * Returns rotation in degrees (0 at address, increases as body turns)
+ */
+export function calculateRotationFromWidth(
+  currentLandmarks: Landmark[],
+  addressLandmarks: Landmark[],
+  bodyPart: 'shoulders' | 'hips'
+): number {
+  const addressWidth = calculateBodyWidth(addressLandmarks, bodyPart)
+  const currentWidth = calculateBodyWidth(currentLandmarks, bodyPart)
+
+  if (addressWidth === 0) return 0
+
+  // Ratio of current to address width (1.0 = no rotation, 0.0 = 90° rotation)
+  // Clamp to [0, 1] to handle noise where width might exceed address
+  const widthRatio = Math.max(0, Math.min(1, currentWidth / addressWidth))
+
+  // Convert ratio to angle: acos gives us the rotation angle
+  const rotationRadians = Math.acos(widthRatio)
+  return rotationRadians * (180 / Math.PI)
+}
+
+/**
+ * Calculate hip sway for face-on view
+ * Measures how much the hip center moves horizontally during the swing
+ * Returns normalized sway as a fraction of stance width (0-1 scale)
+ * Lower values indicate less sway (better)
+ */
+export function calculateHipSway(
+  allFramesLandmarks: Landmark[][],
+  addressLandmarks: Landmark[]
+): number {
+  if (allFramesLandmarks.length === 0) return 0
+
+  const leftHipAddr = addressLandmarks[POSE_LANDMARKS.LEFT_HIP]
+  const rightHipAddr = addressLandmarks[POSE_LANDMARKS.RIGHT_HIP]
+  const leftAnkleAddr = addressLandmarks[POSE_LANDMARKS.LEFT_ANKLE]
+  const rightAnkleAddr = addressLandmarks[POSE_LANDMARKS.RIGHT_ANKLE]
+
+  if (!leftHipAddr || !rightHipAddr || !leftAnkleAddr || !rightAnkleAddr) return 0
+
+  // Calculate address hip center X position
+  const addressHipCenterX = (leftHipAddr.x + rightHipAddr.x) / 2
+
+  // Calculate stance width for normalization
+  const stanceWidth = Math.abs(rightAnkleAddr.x - leftAnkleAddr.x)
+  if (stanceWidth === 0) return 0
+
+  // Track min and max hip center X positions throughout swing
+  let minHipX = addressHipCenterX
+  let maxHipX = addressHipCenterX
+
+  for (const landmarks of allFramesLandmarks) {
+    const leftHip = landmarks[POSE_LANDMARKS.LEFT_HIP]
+    const rightHip = landmarks[POSE_LANDMARKS.RIGHT_HIP]
+    if (!leftHip || !rightHip) continue
+
+    const hipCenterX = (leftHip.x + rightHip.x) / 2
+    minHipX = Math.min(minHipX, hipCenterX)
+    maxHipX = Math.max(maxHipX, hipCenterX)
+  }
+
+  // Total sway distance normalized to stance width
+  const swayDistance = maxHipX - minHipX
+  return swayDistance / stanceWidth
+}
+
+/**
+ * Calculate head stability for face-on view
+ * Measures how much the head moves from its address position
+ * Returns normalized movement (0-1 scale, lower is better)
+ */
+export function calculateHeadStability(
+  swingFramesLandmarks: Landmark[][],
+  addressFramesLandmarks: Landmark[][],
+  addressLandmarks: Landmark[]
+): number {
+  if (swingFramesLandmarks.length === 0) return 0
+
+  // Use nose as head reference point (from address position)
+  const noseAddr = addressLandmarks[POSE_LANDMARKS.NOSE]
+  if (!noseAddr) return 0
+
+  // Calculate median body height across address phase frames for robustness
+  // Using shoulder-to-ankle for full body height (more intuitive normalization)
+  const bodyHeights: number[] = []
+
+  for (const landmarks of addressFramesLandmarks) {
+    const leftShoulder = landmarks[POSE_LANDMARKS.LEFT_SHOULDER]
+    const leftAnkle = landmarks[POSE_LANDMARKS.LEFT_ANKLE]
+    if (leftShoulder && leftAnkle) {
+      const height = Math.abs(leftShoulder.y - leftAnkle.y)
+      if (height > 0) {
+        bodyHeights.push(height)
+      }
+    }
+  }
+
+  if (bodyHeights.length === 0) return 0
+
+  // Use median for robustness against outliers
+  bodyHeights.sort((a, b) => a - b)
+  const medianIndex = Math.floor(bodyHeights.length / 2)
+  const medianBodyHeight = bodyHeights.length % 2 === 0
+    ? (bodyHeights[medianIndex - 1] + bodyHeights[medianIndex]) / 2
+    : bodyHeights[medianIndex]
+
+  if (medianBodyHeight === 0) return 0
+
+  // Collect all deviations from address head position (during swing only)
+  const deviations: number[] = []
+
+  for (const landmarks of swingFramesLandmarks) {
+    const nose = landmarks[POSE_LANDMARKS.NOSE]
+    if (!nose) continue
+
+    // Calculate 2D distance from address position
+    const dx = nose.x - noseAddr.x
+    const dy = nose.y - noseAddr.y
+    const deviation = Math.sqrt(dx * dx + dy * dy)
+
+    deviations.push(deviation)
+  }
+
+  if (deviations.length === 0) return 0
+
+  // Use 95th percentile instead of max to filter outliers from pose detection errors
+  deviations.sort((a, b) => a - b)
+  const percentile95Index = Math.floor(deviations.length * 0.95)
+  const percentile95Deviation = deviations[Math.min(percentile95Index, deviations.length - 1)]
+
+  // Normalize to median body height
+  return percentile95Deviation / medianBodyHeight
+}
+
+/**
+ * Calculate arm extension through impact for face-on view
+ * Measures how well the arms extend toward the target post-impact
+ * Returns a score from 0-1 (higher is better extension)
+ */
+export function calculateImpactExtension(
+  impactLandmarks: Landmark[],
+  postImpactFrames: Landmark[][],
+  isRightHanded: boolean
+): number {
+  // Lead arm is left for right-handers
+  const leadShoulderIdx = isRightHanded ? POSE_LANDMARKS.LEFT_SHOULDER : POSE_LANDMARKS.RIGHT_SHOULDER
+  const leadWristIdx = isRightHanded ? POSE_LANDMARKS.LEFT_WRIST : POSE_LANDMARKS.RIGHT_WRIST
+  const trailWristIdx = isRightHanded ? POSE_LANDMARKS.RIGHT_WRIST : POSE_LANDMARKS.LEFT_WRIST
+
+  const leadShoulder = impactLandmarks[leadShoulderIdx]
+  const leadWrist = impactLandmarks[leadWristIdx]
+  const trailWrist = impactLandmarks[trailWristIdx]
+
+  if (!leadShoulder || !leadWrist || !trailWrist) return 0.5
+
+  // Calculate arm reach at impact (distance from shoulder to hands)
+  const handsCenterX = (leadWrist.x + trailWrist.x) / 2
+  const handsCenterY = (leadWrist.y + trailWrist.y) / 2
+
+  const impactReach = Math.sqrt(
+    (handsCenterX - leadShoulder.x) ** 2 +
+    (handsCenterY - leadShoulder.y) ** 2
+  )
+
+  // Calculate reach for post-impact frames and take median
+  if (postImpactFrames.length > 0) {
+    const postImpactReaches: number[] = []
+
+    for (const landmarks of postImpactFrames) {
+      const ftLeadShoulder = landmarks[leadShoulderIdx]
+      const ftLeadWrist = landmarks[leadWristIdx]
+      const ftTrailWrist = landmarks[trailWristIdx]
+
+      if (ftLeadShoulder && ftLeadWrist && ftTrailWrist) {
+        const ftHandsCenterX = (ftLeadWrist.x + ftTrailWrist.x) / 2
+        const ftHandsCenterY = (ftLeadWrist.y + ftTrailWrist.y) / 2
+
+        const ftReach = Math.sqrt(
+          (ftHandsCenterX - ftLeadShoulder.x) ** 2 +
+          (ftHandsCenterY - ftLeadShoulder.y) ** 2
+        )
+        postImpactReaches.push(ftReach)
+      }
+    }
+
+    if (postImpactReaches.length > 0 && impactReach > 0) {
+      // Take median of post-impact reaches
+      postImpactReaches.sort((a, b) => a - b)
+      const medianIdx = Math.floor(postImpactReaches.length / 2)
+      const medianReach = postImpactReaches.length % 2 === 0
+        ? (postImpactReaches[medianIdx - 1] + postImpactReaches[medianIdx]) / 2
+        : postImpactReaches[medianIdx]
+
+      const extensionRatio = medianReach / impactReach
+      const score = Math.min(1, Math.max(0, extensionRatio - 0.5) * 2)
+
+      logger.info('Impact Extension Debug:', {
+        impactReach: impactReach.toFixed(3),
+        medianPostImpactReach: medianReach.toFixed(3),
+        extensionRatio: extensionRatio.toFixed(2),
+        score: score.toFixed(2),
+        sampledFrames: postImpactReaches.length,
+      })
+
+      return score
+    }
+  }
+
+  // Fallback: just check if arms are reasonably extended at impact
+  // Compare to shoulder width as reference
+  const leftShoulder = impactLandmarks[POSE_LANDMARKS.LEFT_SHOULDER]
+  const rightShoulder = impactLandmarks[POSE_LANDMARKS.RIGHT_SHOULDER]
+  if (leftShoulder && rightShoulder) {
+    const shoulderWidth = Math.abs(rightShoulder.x - leftShoulder.x)
+    if (shoulderWidth > 0) {
+      // Good extension = reach > 1.5x shoulder width
+      const extensionRatio = impactReach / shoulderWidth
+      const score = Math.min(1, Math.max(0, (extensionRatio - 1) / 1.5))
+
+      logger.info('Impact Extension Debug (fallback):', {
+        impactReach: impactReach.toFixed(3),
+        shoulderWidth: shoulderWidth.toFixed(3),
+        extensionRatio: extensionRatio.toFixed(2),
+        score: score.toFixed(2),
+      })
+
+      return score
+    }
+  }
+
+  return 0.5
 }
 
 /**
@@ -302,23 +565,21 @@ export function detectCameraAngle(landmarks: Landmark[]): CameraAngleResult {
   const hipDz = Math.abs(rightHip.z - leftHip.z)
 
   // Average the ratios from shoulders and hips for robustness
-  // Add small epsilon to avoid division by zero
-  const epsilon = 0.001
-  const shoulderRatio = shoulderDx / (shoulderDz + epsilon)
-  const hipRatio = hipDx / (hipDz + epsilon)
+  const shoulderRatio = shoulderDx / (shoulderDz + CAMERA_ANGLE_DETECTION.EPSILON)
+  const hipRatio = hipDx / (hipDz + CAMERA_ANGLE_DETECTION.EPSILON)
   const avgRatio = (shoulderRatio + hipRatio) / 2
 
   let angle: CameraAngle
   let confidence: number
 
-  if (avgRatio > 2.0) {
+  if (avgRatio > CAMERA_ANGLE_DETECTION.FACE_ON_THRESHOLD) {
     angle = 'face-on'
     // Higher ratio = more confident it's face-on
-    confidence = Math.min(1, (avgRatio - 2) / 3 + 0.7)
-  } else if (avgRatio < 0.5) {
+    confidence = Math.min(1, (avgRatio - CAMERA_ANGLE_DETECTION.FACE_ON_THRESHOLD) / 3 + 0.7)
+  } else if (avgRatio < CAMERA_ANGLE_DETECTION.DTL_THRESHOLD) {
     angle = 'dtl'
     // Lower ratio = more confident it's DTL
-    confidence = Math.min(1, (0.5 - avgRatio) / 0.4 + 0.7)
+    confidence = Math.min(1, (CAMERA_ANGLE_DETECTION.DTL_THRESHOLD - avgRatio) / 0.4 + 0.7)
   } else {
     angle = 'oblique'
     // Confidence is lower for oblique angles
@@ -340,7 +601,7 @@ export function detectCameraAngleFromFrames(
   }
 
   // Sample the first few frames (address position)
-  const sampleCount = Math.min(10, framesLandmarks.length)
+  const sampleCount = Math.min(CAMERA_ANGLE_DETECTION.SAMPLE_COUNT, framesLandmarks.length)
   let totalRatio = 0
   let validSamples = 0
 
@@ -361,16 +622,281 @@ export function detectCameraAngleFromFrames(
   let angle: CameraAngle
   let confidence: number
 
-  if (avgRatio > 2.0) {
+  if (avgRatio > CAMERA_ANGLE_DETECTION.FACE_ON_THRESHOLD) {
     angle = 'face-on'
-    confidence = Math.min(1, (avgRatio - 2) / 3 + 0.7)
-  } else if (avgRatio < 0.5) {
+    confidence = Math.min(1, (avgRatio - CAMERA_ANGLE_DETECTION.FACE_ON_THRESHOLD) / 3 + 0.7)
+  } else if (avgRatio < CAMERA_ANGLE_DETECTION.DTL_THRESHOLD) {
     angle = 'dtl'
-    confidence = Math.min(1, (0.5 - avgRatio) / 0.4 + 0.7)
+    confidence = Math.min(1, (CAMERA_ANGLE_DETECTION.DTL_THRESHOLD - avgRatio) / 0.4 + 0.7)
   } else {
     angle = 'oblique'
     confidence = 0.5
   }
 
   return { angle, confidence, ratio: avgRatio }
+}
+
+// =============================================================================
+// CLUB TYPE DETECTION
+// =============================================================================
+
+export interface ClubTypeResult {
+  clubType: ClubType
+  confidence: number
+  signals: {
+    stanceRatio: number
+    handDistance: number
+    spineAngle: number
+  }
+}
+
+/**
+ * Calculate stance width ratio (stance width / hip width)
+ * Driver stance is typically wider relative to hip width
+ */
+function calculateStanceRatio(landmarks: Landmark[]): number {
+  const leftAnkle = landmarks[POSE_LANDMARKS.LEFT_ANKLE]
+  const rightAnkle = landmarks[POSE_LANDMARKS.RIGHT_ANKLE]
+  const leftHip = landmarks[POSE_LANDMARKS.LEFT_HIP]
+  const rightHip = landmarks[POSE_LANDMARKS.RIGHT_HIP]
+
+  if (!leftAnkle || !rightAnkle || !leftHip || !rightHip) return 1.0
+
+  const stanceWidth = Math.abs(rightAnkle.x - leftAnkle.x)
+  const hipWidth = Math.abs(rightHip.x - leftHip.x)
+
+  if (hipWidth === 0) return 1.0
+  return stanceWidth / hipWidth
+}
+
+/**
+ * Calculate hand distance from body (normalized to shoulder width)
+ * Longer clubs = hands further from body at address
+ */
+function calculateHandDistance(landmarks: Landmark[]): number {
+  const leftWrist = landmarks[POSE_LANDMARKS.LEFT_WRIST]
+  const rightWrist = landmarks[POSE_LANDMARKS.RIGHT_WRIST]
+  const leftHip = landmarks[POSE_LANDMARKS.LEFT_HIP]
+  const rightHip = landmarks[POSE_LANDMARKS.RIGHT_HIP]
+  const leftShoulder = landmarks[POSE_LANDMARKS.LEFT_SHOULDER]
+  const rightShoulder = landmarks[POSE_LANDMARKS.RIGHT_SHOULDER]
+
+  if (!leftWrist || !rightWrist || !leftHip || !rightHip || !leftShoulder || !rightShoulder) {
+    return 0.7 // Default middle value
+  }
+
+  // Calculate hand center and hip center
+  const handCenterX = (leftWrist.x + rightWrist.x) / 2
+  const handCenterY = (leftWrist.y + rightWrist.y) / 2
+  const hipCenterX = (leftHip.x + rightHip.x) / 2
+  const hipCenterY = (leftHip.y + rightHip.y) / 2
+
+  // Calculate distance from hands to hip center
+  const handDistance = Math.sqrt(
+    (handCenterX - hipCenterX) ** 2 + (handCenterY - hipCenterY) ** 2
+  )
+
+  // Normalize to shoulder width
+  const shoulderWidth = Math.abs(rightShoulder.x - leftShoulder.x)
+  if (shoulderWidth === 0) return 0.7
+
+  return handDistance / shoulderWidth
+}
+
+/**
+ * Calculate absolute spine angle at address (degrees from vertical)
+ */
+function calculateAbsSpineAngle(landmarks: Landmark[]): number {
+  const spineAngle = calculateSpineAngle(landmarks)
+  return Math.abs(spineAngle)
+}
+
+/**
+ * Detect club type from address position landmarks
+ * Uses stance width, hand position, and spine angle as signals
+ * Camera angle determines which signals are reliable
+ */
+export function detectClubType(landmarks: Landmark[], cameraAngle: CameraAngle): ClubTypeResult {
+  const stanceRatio = calculateStanceRatio(landmarks)
+  const handDistance = calculateHandDistance(landmarks)
+  const spineAngle = calculateAbsSpineAngle(landmarks)
+
+  // Score each signal for driver vs iron
+  // Positive = driver, negative = iron
+  let driverScore = 0
+  let signalCount = 0
+
+  const isFaceOn = cameraAngle === 'face-on'
+  const isDTL = cameraAngle === 'dtl'
+
+  // Stance ratio signal - only reliable for face-on (uses X-axis)
+  if (!isDTL) {
+    if (stanceRatio >= CLUB_DETECTION.STANCE_RATIO.DRIVER_MIN) {
+      driverScore += 1
+      signalCount++
+    } else if (stanceRatio <= CLUB_DETECTION.STANCE_RATIO.IRON_MAX) {
+      driverScore -= 1
+      signalCount++
+    } else {
+      signalCount += 0.5 // Ambiguous
+    }
+  }
+
+  // Hand distance signal - only reliable for oblique views
+  // Face-on: can't see depth (Z-axis)
+  // DTL: shoulder width normalization is broken (shoulders stacked in X)
+  if (!isFaceOn && !isDTL) {
+    const handWeight = 0.7
+    if (handDistance >= CLUB_DETECTION.HAND_DISTANCE.DRIVER_MIN) {
+      driverScore += handWeight
+      signalCount += handWeight
+    } else if (handDistance <= CLUB_DETECTION.HAND_DISTANCE.IRON_MAX) {
+      driverScore -= handWeight
+      signalCount += handWeight
+    } else {
+      signalCount += handWeight * 0.5
+    }
+  }
+
+  // Spine angle signal - only reliable for DTL (face-on shows lateral tilt)
+  if (!isFaceOn) {
+    if (spineAngle <= CLUB_DETECTION.SPINE_ANGLE.DRIVER_MAX) {
+      driverScore += 1
+      signalCount++
+    } else if (spineAngle >= CLUB_DETECTION.SPINE_ANGLE.IRON_MIN) {
+      driverScore -= 1
+      signalCount++
+    } else {
+      signalCount += 0.5
+    }
+  }
+
+  // Calculate confidence based on signal agreement
+  const normalizedScore = signalCount > 0 ? driverScore / signalCount : 0
+  const confidence = Math.abs(normalizedScore)
+
+  let clubType: ClubType
+  if (confidence < CLUB_DETECTION.MIN_CONFIDENCE) {
+    clubType = 'unknown'
+  } else if (normalizedScore > 0) {
+    clubType = 'driver'
+  } else {
+    clubType = 'iron'
+  }
+
+  return {
+    clubType,
+    confidence,
+    signals: {
+      stanceRatio,
+      handDistance,
+      spineAngle,
+    },
+  }
+}
+
+/**
+ * Detect club type from multiple frames for more stable detection
+ * Samples early frames (address position)
+ */
+export function detectClubTypeFromFrames(
+  framesLandmarks: Landmark[][],
+  cameraAngle: CameraAngle
+): ClubTypeResult {
+  if (framesLandmarks.length === 0) {
+    return {
+      clubType: 'unknown',
+      confidence: 0,
+      signals: { stanceRatio: 0, handDistance: 0, spineAngle: 0 },
+    }
+  }
+
+  const sampleCount = Math.min(CLUB_DETECTION.SAMPLE_FRAMES, framesLandmarks.length)
+
+  let totalStanceRatio = 0
+  let totalHandDistance = 0
+  let totalSpineAngle = 0
+
+  // Accumulate signals from all sampled frames regardless of individual confidence
+  // Individual frame confidence can be 0 when signals are in the ambiguous zone,
+  // but the signal values are still valid and should be averaged
+  for (let i = 0; i < sampleCount; i++) {
+    const result = detectClubType(framesLandmarks[i], cameraAngle)
+    totalStanceRatio += result.signals.stanceRatio
+    totalHandDistance += result.signals.handDistance
+    totalSpineAngle += result.signals.spineAngle
+  }
+
+  const avgSignals = {
+    stanceRatio: totalStanceRatio / sampleCount,
+    handDistance: totalHandDistance / sampleCount,
+    spineAngle: totalSpineAngle / sampleCount,
+  }
+
+  // Re-run detection logic with averaged values
+  let driverScore = 0
+  let signalCount = 0
+
+  const isFaceOn = cameraAngle === 'face-on'
+  const isDTL = cameraAngle === 'dtl'
+
+  // Stance ratio signal - only reliable for face-on
+  if (!isDTL) {
+    if (avgSignals.stanceRatio >= CLUB_DETECTION.STANCE_RATIO.DRIVER_MIN) {
+      driverScore += 1
+      signalCount++
+    } else if (avgSignals.stanceRatio <= CLUB_DETECTION.STANCE_RATIO.IRON_MAX) {
+      driverScore -= 1
+      signalCount++
+    } else {
+      signalCount += 0.5
+    }
+  }
+
+  // Hand distance signal - only reliable for oblique views
+  // Face-on: can't see depth (Z-axis)
+  // DTL: shoulder width normalization is broken (shoulders stacked in X)
+  if (!isFaceOn && !isDTL) {
+    const handWeight = 0.7
+    if (avgSignals.handDistance >= CLUB_DETECTION.HAND_DISTANCE.DRIVER_MIN) {
+      driverScore += handWeight
+      signalCount += handWeight
+    } else if (avgSignals.handDistance <= CLUB_DETECTION.HAND_DISTANCE.IRON_MAX) {
+      driverScore -= handWeight
+      signalCount += handWeight
+    } else {
+      signalCount += handWeight * 0.5
+    }
+  }
+
+  // Spine angle signal - only reliable for DTL
+  if (!isFaceOn) {
+    if (avgSignals.spineAngle <= CLUB_DETECTION.SPINE_ANGLE.DRIVER_MAX) {
+      driverScore += 1
+      signalCount++
+    } else if (avgSignals.spineAngle >= CLUB_DETECTION.SPINE_ANGLE.IRON_MIN) {
+      driverScore -= 1
+      signalCount++
+    } else {
+      signalCount += 0.5
+    }
+  }
+
+  const normalizedScore = signalCount > 0 ? driverScore / signalCount : 0
+  const confidence = Math.abs(normalizedScore)
+
+  let clubType: ClubType
+  if (confidence < CLUB_DETECTION.MIN_CONFIDENCE) {
+    clubType = 'unknown'
+  } else if (normalizedScore > 0) {
+    clubType = 'driver'
+  } else {
+    clubType = 'iron'
+  }
+
+  return {
+    clubType,
+    confidence,
+    signals: avgSignals,
+  }
 }

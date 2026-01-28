@@ -6,6 +6,7 @@ import {
   type FrameMetrics,
 } from './angleCalculations'
 import { logger } from './debugLogger'
+import { PHASE_DETECTION } from './constants'
 
 export interface PhaseFrame {
   frameIndex: number
@@ -221,17 +222,16 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
     })
   }
 
-  // Apply smoothing to reduce noise - use window size of 5 frames
-  const smoothingWindow = 5
-  const smoothedVelocities = smoothArray(velocities, smoothingWindow)
-  const smoothedHandHeights = smoothArray(handHeights, smoothingWindow)
+  // Apply smoothing to reduce noise
+  const smoothedVelocities = smoothArray(velocities, PHASE_DETECTION.SMOOTHING_WINDOW)
+  const smoothedHandHeights = smoothArray(handHeights, PHASE_DETECTION.SMOOTHING_WINDOW)
 
   // Step 1: Find impact frame using smoothed velocities
   // Use robust peak detection to find the most stable velocity peak
-  const impactSearchStart = Math.floor(frames.length * 0.3) // Impact is never in first 30%
-  const impactSearchEnd = Math.floor(frames.length * 0.85) // Impact is never in last 15%
+  const impactSearchStart = Math.floor(frames.length * PHASE_DETECTION.IMPACT_SEARCH.START_FRACTION)
+  const impactSearchEnd = Math.floor(frames.length * PHASE_DETECTION.IMPACT_SEARCH.END_FRACTION)
 
-  let impactIdx = findRobustPeakIndex(smoothedVelocities, impactSearchStart, impactSearchEnd, 2)
+  let impactIdx = findRobustPeakIndex(smoothedVelocities, impactSearchStart, impactSearchEnd, PHASE_DETECTION.MIN_PEAK_WIDTH)
 
   // Fallback: if no robust peak found, use simple max in the search range
   if (impactIdx === impactSearchStart) {
@@ -244,14 +244,13 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
     }
   }
 
-  // Refine impact detection: peak velocity often occurs 1-3 frames before actual impact
-  // Look for the point right after the peak where velocity is still high but starting to drop
-  // This better represents the actual ball contact moment
+  // Refine impact detection: peak velocity often occurs several frames before actual impact
+  // For slow-motion videos, this gap can be significant (10+ frames)
   const peakVelocity = smoothedVelocities[impactIdx]
-  const velocityDropThreshold = peakVelocity * 0.92 // 92% of peak
+  const velocityDropThreshold = peakVelocity * PHASE_DETECTION.VELOCITY_DROP_THRESHOLD
 
-  // Search a few frames after the peak for where velocity drops below threshold
-  for (let i = impactIdx; i < Math.min(impactIdx + 4, impactSearchEnd); i++) {
+  // Search more frames after the peak for velocity drop
+  for (let i = impactIdx; i < Math.min(impactIdx + PHASE_DETECTION.VELOCITY_DROP_SEARCH_FRAMES, impactSearchEnd); i++) {
     if (smoothedVelocities[i] < velocityDropThreshold) {
       // Impact is likely the frame just before the drop
       impactIdx = Math.max(impactIdx, i - 1)
@@ -260,9 +259,9 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
   }
 
   // Alternative: if hands reach their lowest point (highest Y) near the velocity peak,
-  // that's a strong indicator of impact. Check frames around the velocity peak.
+  // that's a strong indicator of impact. Use wider window for slow-motion videos.
   const handHeightCheckStart = Math.max(0, impactIdx - 3)
-  const handHeightCheckEnd = Math.min(frames.length, impactIdx + 5)
+  const handHeightCheckEnd = Math.min(frames.length, impactIdx + PHASE_DETECTION.HAND_HEIGHT_SEARCH_FRAMES)
   let maxHandY = -Infinity
   let maxHandYIdx = impactIdx
 
@@ -274,14 +273,23 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
     }
   }
 
-  // If the lowest hand position is within a few frames of velocity peak, use it
-  if (Math.abs(maxHandYIdx - impactIdx) <= 3) {
+  // If the lowest hand position is after the velocity peak, consider using it
+  // (velocity peak comes before ball contact, lowest hand position = ball contact)
+  // But limit how far we look - if too far after velocity peak, it's likely follow-through
+  if (maxHandYIdx > impactIdx && maxHandYIdx <= impactIdx + PHASE_DETECTION.MAX_HAND_HEIGHT_OFFSET) {
+    // Within reasonable range, prefer hand height as more direct indicator
+    impactIdx = maxHandYIdx
+  } else if (maxHandYIdx > impactIdx + PHASE_DETECTION.MAX_HAND_HEIGHT_OFFSET) {
+    // Too far - likely in follow-through. Use weighted average closer to velocity peak
+    impactIdx = Math.round(impactIdx + PHASE_DETECTION.MAX_HAND_HEIGHT_OFFSET * 0.7)
+  } else if (Math.abs(maxHandYIdx - impactIdx) <= 3) {
+    // If close, average them
     impactIdx = Math.round((impactIdx + maxHandYIdx) / 2)
   }
 
   // Step 2: Find top of backswing BEFORE impact using smoothed hand heights
   // Look for: highest hand position (lowest Y value in MediaPipe coordinates)
-  const searchStartIdx = Math.floor(frames.length * 0.1) // Skip first 10% (definite address)
+  const searchStartIdx = Math.floor(frames.length * PHASE_DETECTION.TOP_SEARCH_START_FRACTION)
   const searchEndIdx = Math.max(searchStartIdx + 3, impactIdx - 3) // Must be before impact
 
   // Find the frame with highest hand position (minimum Y in smoothed data)
@@ -310,19 +318,17 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
   let addressEndIdx = 0
 
   // Calculate baseline velocity from first few frames (should be low during address)
-  const baselineFrames = Math.min(5, Math.floor(frames.length * 0.1))
+  const baselineFrames = Math.min(5, Math.floor(frames.length * PHASE_DETECTION.TOP_SEARCH_START_FRACTION))
   let baselineVelocity = 0
   for (let i = 0; i < baselineFrames; i++) {
     baselineVelocity += smoothedVelocities[i]
   }
   baselineVelocity = baselineVelocity / baselineFrames
 
-  // Use multiple signals to find when swing actually starts:
-  // 1. Velocity significantly exceeds baseline (not just peak threshold)
-  // 2. Hand position starts moving consistently in one direction
+  // Use multiple signals to find when swing actually starts
   const velocityThreshold = Math.max(
-    baselineVelocity * 3.0, // 3x baseline velocity
-    smoothedVelocities[impactIdx] * 0.08 // Or 8% of peak velocity
+    baselineVelocity * PHASE_DETECTION.ADDRESS_DETECTION.VELOCITY_MULTIPLIER,
+    smoothedVelocities[impactIdx] * PHASE_DETECTION.ADDRESS_DETECTION.PEAK_VELOCITY_FRACTION
   )
 
   // Look for sustained velocity increase (not just a single frame spike)
@@ -338,15 +344,13 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
   }
 
   // If no clear velocity increase found, use hand movement direction
-  // Look for when hand starts moving consistently away from address position
   if (addressEndIdx < 3) {
     const initialHandX = handXPositions[0]
-    const handMovementThreshold = 0.03 // 3% of frame width
 
     for (let i = 3; i < addressSearchEnd; i++) {
       const handDelta = Math.abs(smoothedHandHeights[i] - smoothedHandHeights[0]) +
                         Math.abs(handXPositions[i] - initialHandX)
-      if (handDelta > handMovementThreshold) {
+      if (handDelta > PHASE_DETECTION.ADDRESS_DETECTION.HAND_MOVEMENT_THRESHOLD) {
         addressEndIdx = Math.max(0, i - 2)
         break
       }
@@ -373,7 +377,7 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
   })
 
   const followThroughStartIdx = impactIdx + 2
-  const finishStartIdx = Math.floor(frames.length * 0.85)
+  const finishStartIdx = Math.floor(frames.length * PHASE_DETECTION.FINISH_START_FRACTION)
 
   for (let i = 0; i < phaseFrames.length; i++) {
     let phase: SwingPhase
