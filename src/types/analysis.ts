@@ -71,5 +71,6 @@ export interface AnalysisResult {
   cameraAngleConfidence: number
   clubType: ClubType
   clubTypeConfidence: number
+  clubTypeOverridden: boolean  // True if user manually set the club type
   detectedMistakes?: DetectorResult[]
 }

@@ -1,6 +1,6 @@
 import type { DetectorInput, DetectorResult, MistakeDetector } from '../types'
-import { createNotDetectedResult } from '../types'
 import { FEEDBACK_THRESHOLDS } from '@/utils/constants'
+import { logger } from '@/utils/debugLogger'
 
 /**
  * BENT_LEAD_ARM detector
@@ -22,6 +22,14 @@ export const detectBentLeadArm: MistakeDetector = (input: DetectorInput): Detect
   const thresholds = cameraAngle === 'face-on'
     ? FEEDBACK_THRESHOLDS.LEAD_ARM.FACE_ON
     : FEEDBACK_THRESHOLDS.LEAD_ARM.DEFAULT
+
+  logger.info('BENT_LEAD_ARM Debug:', {
+    cameraAngle,
+    topLeadArmExtension: topLeadArmExtension.toFixed(1) + '°',
+    goodThreshold: thresholds.GOOD + '°',
+    okThreshold: thresholds.OK + '°',
+    detected: topLeadArmExtension < thresholds.GOOD,
+  })
 
   // If arm is well extended, no issue
   if (topLeadArmExtension >= thresholds.GOOD) {

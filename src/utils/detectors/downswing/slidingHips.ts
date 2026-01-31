@@ -1,7 +1,6 @@
 import type { DetectorInput, DetectorResult, MistakeDetector } from '../types'
-import { createNotDetectedResult, getPhaseFrameIndices } from '../types'
-import { POSE_LANDMARKS } from '@/types/pose'
-import { calculateRotationFromWidth } from '@/utils/angleCalculations'
+import { createNotDetectedResult } from '../types'
+import { logger } from '@/utils/debugLogger'
 
 /**
  * SLIDING_HIPS detector
@@ -18,10 +17,11 @@ import { calculateRotationFromWidth } from '@/utils/angleCalculations'
  * Only reliable for face-on camera angle
  */
 export const detectSlidingHips: MistakeDetector = (input: DetectorInput): DetectorResult => {
-  const { frames, phaseSegments, metrics, cameraAngle } = input
+  const { metrics, cameraAngle } = input
 
   // Only reliable for face-on camera angle
   if (cameraAngle !== 'face-on') {
+    logger.info('SLIDING_HIPS: Skipped (not face-on)', { cameraAngle })
     return createNotDetectedResult('SLIDING_HIPS', 'Requires face-on camera angle')
   }
 
@@ -47,6 +47,15 @@ export const detectSlidingHips: MistakeDetector = (input: DetectorInput): Detect
 
   // Also check if hip sway is elevated even if rotation is okay
   const hipSwayElevated = metrics.hipSway > 0.50 // 50% of stance width
+
+  logger.info('SLIDING_HIPS Debug:', {
+    hipSway: (metrics.hipSway * 100).toFixed(1) + '%',
+    hipRotation: hipRotation.toFixed(1) + '°',
+    slideRatio: slideRatio.toFixed(2),
+    threshold: SLIDE_THRESHOLD,
+    hipSwayElevated,
+    detected: slideRatio >= SLIDE_THRESHOLD || hipSwayElevated,
+  })
 
   if (slideRatio < SLIDE_THRESHOLD && !hipSwayElevated) {
     return {

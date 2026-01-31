@@ -5,15 +5,16 @@ import { VideoPlayer } from '@/components/VideoPlayer'
 import { AnalysisProgress } from '@/components/AnalysisProgress'
 import { SwingResults } from '@/components/SwingResults'
 import { SwingTimeline } from '@/components/SwingTimeline'
+import { ComparisonView } from '@/components/ComparisonView'
 import { useVideoStorage } from '@/hooks/useVideoStorage'
 import { useSwingAnalysis } from '@/hooks/useSwingAnalysis'
 import { useAutoAnalyze } from '@/hooks/useAutoAnalyze'
-import { analyzeSwing } from '@/utils/swingAnalyzer'
+import { analyzeSwing, type AnalyzeSwingOptions } from '@/utils/swingAnalyzer'
 import { logger } from '@/utils/debugLogger'
 import type { VideoFile } from '@/types/video'
-import type { AnalysisResult } from '@/types/analysis'
+import type { AnalysisResult, ClubType } from '@/types/analysis'
 
-type AppState = 'upload' | 'player' | 'analyzing' | 'results'
+type AppState = 'upload' | 'player' | 'analyzing' | 'results' | 'comparison'
 
 function App() {
   const [appState, setAppState] = useState<AppState>('upload')
@@ -150,6 +151,16 @@ function App() {
         logger.info('Phase Segments:', result.phaseSegments.length)
         logger.info('=== END RESULTS ===')
 
+        // Log phase segments in copy-paste format for proVideos.ts
+        const phaseSegmentsCode = result.phaseSegments.map(seg =>
+          `      { phase: '${seg.phase}' as SwingPhase, startFrame: ${seg.startFrame}, endFrame: ${seg.endFrame}, startTime: ${seg.startTime.toFixed(3)}, endTime: ${seg.endTime.toFixed(3)}, duration: ${seg.duration.toFixed(3)} },`
+        ).join('\n')
+        console.log('\n=== COPY THIS TO proVideos.ts phaseSegments ===\n')
+        console.log('phaseSegments: [')
+        console.log(phaseSegmentsCode)
+        console.log('],')
+        console.log('\n=== END COPY ===\n')
+
         setAnalysisResult(result)
         setAppState('results')
       } else {
@@ -181,6 +192,33 @@ function App() {
       videoRef.current.currentTime = time
     }
   }, [])
+
+  const handleCompare = useCallback(() => {
+    setAppState('comparison')
+  }, [])
+
+  const handleBackToResults = useCallback(() => {
+    setAppState('results')
+  }, [])
+
+  const handleClubTypeChange = useCallback((newClubType: ClubType) => {
+    if (!analysisResult || !currentVideo) return
+
+    logger.info('Club type override:', { newClubType, previousClubType: analysisResult.clubType })
+
+    // Re-run analysis with the overridden club type using existing frames
+    const result = analyzeSwing(analysisResult.frames, currentVideo.id, {
+      clubTypeOverride: newClubType,
+    })
+
+    logger.info('Re-analysis complete with club type override:', {
+      clubType: result.clubType,
+      clubTypeOverridden: result.clubTypeOverridden,
+      overallScore: result.overallScore,
+    })
+
+    setAnalysisResult(result)
+  }, [analysisResult, currentVideo])
 
   // Auto-load video from URL params (dev mode only)
   useAutoAnalyze({
@@ -252,8 +290,18 @@ function App() {
               result={analysisResult}
               onBackToPlayer={handleBackToPlayer}
               onUploadNew={handleUploadNew}
+              onClubTypeChange={handleClubTypeChange}
+              onCompare={handleCompare}
             />
           </div>
+        )}
+
+        {appState === 'comparison' && analysisResult && videoUrl && (
+          <ComparisonView
+            userResult={analysisResult}
+            userVideoUrl={videoUrl}
+            onBack={handleBackToResults}
+          />
         )}
       </main>
     </div>

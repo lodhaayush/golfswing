@@ -100,11 +100,11 @@ export function useSwingAnalysis(): UseSwingAnalysisResult {
 
         logger.info('startAnalysis - model ready, extracting frames')
 
-        // Extract frames
+        // Extract frames (shown as "Analyzing swing" to user)
         setProgress({
           phase: 'extracting_frames',
           progress: 0,
-          message: 'Extracting video frames...',
+          message: 'Analyzing swing...',
         })
 
         const extractedFrames: { canvas: HTMLCanvasElement; timestamp: number; frameIndex: number }[] = []
@@ -115,7 +115,7 @@ export function useSwingAnalysis(): UseSwingAnalysisResult {
             setProgress({
               phase: 'extracting_frames',
               progress: p * 0.99, // 0-99% for extraction (slower task)
-              message: `Extracting frames... ${Math.round(p * 100)}%`,
+              message: 'Analyzing swing...',
             })
           },
         })
@@ -147,7 +147,7 @@ export function useSwingAnalysis(): UseSwingAnalysisResult {
         setProgress({
           phase: 'detecting_poses',
           progress: 0.99,
-          message: 'Detecting poses...',
+          message: 'Detecting body positions...',
         })
 
         const poseFrames: PoseFrame[] = []
@@ -175,7 +175,7 @@ export function useSwingAnalysis(): UseSwingAnalysisResult {
           setProgress({
             phase: 'detecting_poses',
             progress: 0.99 + poseProgress * 0.01, // 99-100% for pose detection
-            message: `Analyzing pose ${i + 1}/${totalFrames}...`,
+            message: `Detecting body positions...`,
           })
         }
 

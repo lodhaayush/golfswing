@@ -119,14 +119,6 @@ export const COMMON_SWING_MISTAKES: readonly SwingMistake[] = [
     detectableViaPose: 'partial',
     severity: 'moderate',
   },
-  {
-    id: 'RUSHING_BACKSWING',
-    category: 'backswing',
-    name: 'Rushing backswing',
-    description: 'Backswing too fast relative to downswing (poor tempo)',
-    detectableViaPose: true,
-    severity: 'moderate',
-  },
 
   // ============================================
   // Category 3: Downswing Faults

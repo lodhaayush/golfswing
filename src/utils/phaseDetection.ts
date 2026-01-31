@@ -6,7 +6,7 @@ import {
   type FrameMetrics,
 } from './angleCalculations'
 import { logger } from './debugLogger'
-import { PHASE_DETECTION } from './constants'
+import { PHASE_DETECTION, SLOW_MOTION } from './constants'
 
 export interface PhaseFrame {
   frameIndex: number
@@ -244,6 +244,15 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
     }
   }
 
+  const velocityPeakIdx = impactIdx  // Save for logging
+
+  logger.info('Velocity Peak Found:', {
+    velocityPeakIdx,
+    velocityPeakTime: frames[velocityPeakIdx]?.timestamp.toFixed(2),
+    searchStart: impactSearchStart,
+    searchEnd: impactSearchEnd,
+  })
+
   // Refine impact detection: peak velocity often occurs several frames before actual impact
   // For slow-motion videos, this gap can be significant (10+ frames)
   const peakVelocity = smoothedVelocities[impactIdx]
@@ -273,19 +282,56 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
     }
   }
 
+  logger.info('Hand Height Search:', {
+    handHeightCheckStart,
+    handHeightCheckEnd,
+    velocityPeakIdx,
+    lowestHandIdx: maxHandYIdx,
+    lowestHandTime: frames[maxHandYIdx]?.timestamp.toFixed(2),
+    distanceFromVelocityPeak: maxHandYIdx - velocityPeakIdx,
+  })
+
   // If the lowest hand position is after the velocity peak, consider using it
   // (velocity peak comes before ball contact, lowest hand position = ball contact)
   // But limit how far we look - if too far after velocity peak, it's likely follow-through
-  if (maxHandYIdx > impactIdx && maxHandYIdx <= impactIdx + PHASE_DETECTION.MAX_HAND_HEIGHT_OFFSET) {
-    // Within reasonable range, prefer hand height as more direct indicator
+  //
+  // NOTE: In a good golf swing, lowest hand position often occurs AT or slightly BEFORE
+  // the velocity peak, as the club accelerates through the ball. So we should also
+  // prefer hand height when it's before the peak.
+  let impactDecision = 'velocity_peak_only'
+  const distanceFromPeak = maxHandYIdx - velocityPeakIdx
+
+  // Scale threshold for slow-motion videos (more frames = larger absolute differences)
+  const isSlowMotion = frames.length > SLOW_MOTION.FRAME_COUNT_THRESHOLD
+  const handHeightBeforePeakThreshold = isSlowMotion
+    ? Math.round(5 * SLOW_MOTION.SEARCH_WINDOW_SCALE)  // 15 frames for slow-mo
+    : 5  // 5 frames for normal speed
+
+  if (distanceFromPeak < 0 && distanceFromPeak >= -handHeightBeforePeakThreshold) {
+    // Lowest hand is BEFORE velocity peak - this is the true impact in a good swing
+    impactDecision = 'hand_height_before_peak'
+    impactIdx = maxHandYIdx
+  } else if (maxHandYIdx > impactIdx && maxHandYIdx <= impactIdx + PHASE_DETECTION.MAX_HAND_HEIGHT_OFFSET) {
+    // Within reasonable range after peak, prefer hand height as more direct indicator
+    impactDecision = 'hand_height_after_peak'
     impactIdx = maxHandYIdx
   } else if (maxHandYIdx > impactIdx + PHASE_DETECTION.MAX_HAND_HEIGHT_OFFSET) {
     // Too far - likely in follow-through. Use weighted average closer to velocity peak
+    impactDecision = 'weighted_average_too_far'
     impactIdx = Math.round(impactIdx + PHASE_DETECTION.MAX_HAND_HEIGHT_OFFSET * 0.7)
   } else if (Math.abs(maxHandYIdx - impactIdx) <= 3) {
     // If close, average them
+    impactDecision = 'averaged_close'
     impactIdx = Math.round((impactIdx + maxHandYIdx) / 2)
   }
+
+  logger.info('Impact Detection Decision:', {
+    impactDecision,
+    finalImpactIdx: impactIdx,
+    finalImpactTime: frames[impactIdx]?.timestamp.toFixed(2),
+    isSlowMotion,
+    handHeightBeforePeakThreshold,
+  })
 
   // Step 2: Find top of backswing BEFORE impact using smoothed hand heights
   // Look for: highest hand position (lowest Y value in MediaPipe coordinates)

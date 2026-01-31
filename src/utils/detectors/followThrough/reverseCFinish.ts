@@ -1,6 +1,5 @@
 import type { DetectorInput, DetectorResult, MistakeDetector } from '../types'
 import { createNotDetectedResult, getPhaseFrameIndices } from '../types'
-import { POSE_LANDMARKS } from '@/types/pose'
 import { calculateSpineAngle } from '@/utils/angleCalculations'
 
 /**

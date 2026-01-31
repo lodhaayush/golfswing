@@ -22,7 +22,6 @@ export type SwingMistakeId =
   | 'BENT_LEAD_ARM'
   | 'LIFTING_HEAD'
   | 'POOR_WRIST_HINGE'
-  | 'RUSHING_BACKSWING'
   // Downswing Faults
   | 'OVER_THE_TOP'
   | 'CASTING'

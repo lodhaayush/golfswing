@@ -27,8 +27,13 @@ export function calculateAngle2D(
 }
 
 /**
- * Calculate the angle between three points in 3D
+ * Calculate the angle between three points in 2D (X/Y only)
  * Returns angle at point B in degrees
+ *
+ * NOTE: We intentionally ignore the Z-axis because MediaPipe's depth
+ * estimation is unreliable, especially for DTL camera angles where
+ * limbs extend toward/away from the camera. Using only X/Y provides
+ * more consistent and accurate angle measurements.
  */
 export function calculateAngle3D(
   pointA: Landmark,
@@ -38,17 +43,15 @@ export function calculateAngle3D(
   const vectorBA = {
     x: pointA.x - pointB.x,
     y: pointA.y - pointB.y,
-    z: pointA.z - pointB.z,
   }
   const vectorBC = {
     x: pointC.x - pointB.x,
     y: pointC.y - pointB.y,
-    z: pointC.z - pointB.z,
   }
 
-  const dotProduct = vectorBA.x * vectorBC.x + vectorBA.y * vectorBC.y + vectorBA.z * vectorBC.z
-  const magnitudeBA = Math.sqrt(vectorBA.x ** 2 + vectorBA.y ** 2 + vectorBA.z ** 2)
-  const magnitudeBC = Math.sqrt(vectorBC.x ** 2 + vectorBC.y ** 2 + vectorBC.z ** 2)
+  const dotProduct = vectorBA.x * vectorBC.x + vectorBA.y * vectorBC.y
+  const magnitudeBA = Math.sqrt(vectorBA.x ** 2 + vectorBA.y ** 2)
+  const magnitudeBC = Math.sqrt(vectorBC.x ** 2 + vectorBC.y ** 2)
 
   if (magnitudeBA === 0 || magnitudeBC === 0) return 0
 
@@ -647,6 +650,8 @@ export interface ClubTypeResult {
     stanceRatio: number
     handDistance: number
     spineAngle: number
+    armExtension: number
+    kneeFlexAngle: number
   }
 }
 
@@ -712,14 +717,72 @@ function calculateAbsSpineAngle(landmarks: Landmark[]): number {
 }
 
 /**
+ * Calculate arm extension ratio (vertical drop from shoulders to hands / body height)
+ * Higher values = hands lower relative to body = more bent over (typical for irons)
+ * Works reliably in face-on view (uses Y-axis only)
+ */
+function calculateArmExtensionRatio(landmarks: Landmark[]): number {
+  const leftShoulder = landmarks[POSE_LANDMARKS.LEFT_SHOULDER]
+  const rightShoulder = landmarks[POSE_LANDMARKS.RIGHT_SHOULDER]
+  const leftWrist = landmarks[POSE_LANDMARKS.LEFT_WRIST]
+  const rightWrist = landmarks[POSE_LANDMARKS.RIGHT_WRIST]
+  const leftAnkle = landmarks[POSE_LANDMARKS.LEFT_ANKLE]
+  const rightAnkle = landmarks[POSE_LANDMARKS.RIGHT_ANKLE]
+
+  if (!leftShoulder || !rightShoulder || !leftWrist || !rightWrist || !leftAnkle || !rightAnkle) {
+    return 0.40 // Default middle value
+  }
+
+  // Calculate vertical centers (Y increases downward in video coordinates)
+  const shoulderCenterY = (leftShoulder.y + rightShoulder.y) / 2
+  const handCenterY = (leftWrist.y + rightWrist.y) / 2
+  const ankleCenterY = (leftAnkle.y + rightAnkle.y) / 2
+
+  // Body height from shoulders to ankles
+  const bodyHeight = Math.abs(ankleCenterY - shoulderCenterY)
+  if (bodyHeight === 0) return 0.40
+
+  // Arm drop (how far hands are below shoulders)
+  const armDrop = handCenterY - shoulderCenterY // Positive = hands below shoulders
+
+  // Normalize to body height
+  return armDrop / bodyHeight
+}
+
+/**
+ * Calculate average knee flex angle at address (degrees)
+ * Lower angle = more knee flex = iron (shorter club, more bent stance)
+ * Works reliably in face-on view
+ */
+function calculateKneeFlexAngle(landmarks: Landmark[]): number {
+  const leftHip = landmarks[POSE_LANDMARKS.LEFT_HIP]
+  const rightHip = landmarks[POSE_LANDMARKS.RIGHT_HIP]
+  const leftKnee = landmarks[POSE_LANDMARKS.LEFT_KNEE]
+  const rightKnee = landmarks[POSE_LANDMARKS.RIGHT_KNEE]
+  const leftAnkle = landmarks[POSE_LANDMARKS.LEFT_ANKLE]
+  const rightAnkle = landmarks[POSE_LANDMARKS.RIGHT_ANKLE]
+
+  if (!leftHip || !rightHip || !leftKnee || !rightKnee || !leftAnkle || !rightAnkle) {
+    return 155 // Default nearly straight
+  }
+
+  const leftKneeAngle = calculateAngle2D(leftHip, leftKnee, leftAnkle)
+  const rightKneeAngle = calculateAngle2D(rightHip, rightKnee, rightAnkle)
+
+  return (leftKneeAngle + rightKneeAngle) / 2
+}
+
+/**
  * Detect club type from address position landmarks
- * Uses stance width, hand position, and spine angle as signals
+ * Uses stance width, hand position, spine angle, arm extension, and knee flex as signals
  * Camera angle determines which signals are reliable
  */
 export function detectClubType(landmarks: Landmark[], cameraAngle: CameraAngle): ClubTypeResult {
   const stanceRatio = calculateStanceRatio(landmarks)
   const handDistance = calculateHandDistance(landmarks)
   const spineAngle = calculateAbsSpineAngle(landmarks)
+  const armExtension = calculateArmExtensionRatio(landmarks)
+  const kneeFlexAngle = calculateKneeFlexAngle(landmarks)
 
   // Score each signal for driver vs iron
   // Positive = driver, negative = iron
@@ -729,16 +792,16 @@ export function detectClubType(landmarks: Landmark[], cameraAngle: CameraAngle):
   const isFaceOn = cameraAngle === 'face-on'
   const isDTL = cameraAngle === 'dtl'
 
-  // Stance ratio signal - only reliable for face-on (uses X-axis)
+  // Stance ratio signal - only reliable for face-on and oblique (uses X-axis)
+  // For face-on, this is the primary signal for club detection
+  // Single threshold - no ambiguous zone
   if (!isDTL) {
-    if (stanceRatio >= CLUB_DETECTION.STANCE_RATIO.DRIVER_MIN) {
+    if (stanceRatio >= CLUB_DETECTION.STANCE_RATIO.THRESHOLD) {
       driverScore += 1
       signalCount++
-    } else if (stanceRatio <= CLUB_DETECTION.STANCE_RATIO.IRON_MAX) {
+    } else {
       driverScore -= 1
       signalCount++
-    } else {
-      signalCount += 0.5 // Ambiguous
     }
   }
 
@@ -759,15 +822,30 @@ export function detectClubType(landmarks: Landmark[], cameraAngle: CameraAngle):
   }
 
   // Spine angle signal - only reliable for DTL (face-on shows lateral tilt)
+  // Single threshold at 45° - no ambiguous zone
   if (!isFaceOn) {
-    if (spineAngle <= CLUB_DETECTION.SPINE_ANGLE.DRIVER_MAX) {
+    if (spineAngle <= CLUB_DETECTION.SPINE_ANGLE.THRESHOLD) {
       driverScore += 1
       signalCount++
-    } else if (spineAngle >= CLUB_DETECTION.SPINE_ANGLE.IRON_MIN) {
+    } else {
       driverScore -= 1
       signalCount++
+    }
+  }
+
+  // Knee flex signal - only reliable for DTL and oblique
+  // Face-on: knee flex happens in Z-axis (toward/away from camera), not visible
+  // More flex (lower angle) = iron
+  if (!isFaceOn) {
+    const kneeWeight = 0.6
+    if (kneeFlexAngle >= CLUB_DETECTION.KNEE_FLEX.DRIVER_MIN) {
+      driverScore += kneeWeight
+      signalCount += kneeWeight
+    } else if (kneeFlexAngle <= CLUB_DETECTION.KNEE_FLEX.IRON_MAX) {
+      driverScore -= kneeWeight
+      signalCount += kneeWeight
     } else {
-      signalCount += 0.5
+      signalCount += kneeWeight * 0.5 // Ambiguous zone
     }
   }
 
@@ -791,6 +869,8 @@ export function detectClubType(landmarks: Landmark[], cameraAngle: CameraAngle):
       stanceRatio,
       handDistance,
       spineAngle,
+      armExtension,
+      kneeFlexAngle,
     },
   }
 }
@@ -807,7 +887,7 @@ export function detectClubTypeFromFrames(
     return {
       clubType: 'unknown',
       confidence: 0,
-      signals: { stanceRatio: 0, handDistance: 0, spineAngle: 0 },
+      signals: { stanceRatio: 0, handDistance: 0, spineAngle: 0, armExtension: 0, kneeFlexAngle: 0 },
     }
   }
 
@@ -816,6 +896,8 @@ export function detectClubTypeFromFrames(
   let totalStanceRatio = 0
   let totalHandDistance = 0
   let totalSpineAngle = 0
+  let totalArmExtension = 0
+  let totalKneeFlexAngle = 0
 
   // Accumulate signals from all sampled frames regardless of individual confidence
   // Individual frame confidence can be 0 when signals are in the ambiguous zone,
@@ -825,12 +907,16 @@ export function detectClubTypeFromFrames(
     totalStanceRatio += result.signals.stanceRatio
     totalHandDistance += result.signals.handDistance
     totalSpineAngle += result.signals.spineAngle
+    totalArmExtension += result.signals.armExtension
+    totalKneeFlexAngle += result.signals.kneeFlexAngle
   }
 
   const avgSignals = {
     stanceRatio: totalStanceRatio / sampleCount,
     handDistance: totalHandDistance / sampleCount,
     spineAngle: totalSpineAngle / sampleCount,
+    armExtension: totalArmExtension / sampleCount,
+    kneeFlexAngle: totalKneeFlexAngle / sampleCount,
   }
 
   // Re-run detection logic with averaged values
@@ -840,16 +926,18 @@ export function detectClubTypeFromFrames(
   const isFaceOn = cameraAngle === 'face-on'
   const isDTL = cameraAngle === 'dtl'
 
-  // Stance ratio signal - only reliable for face-on
+  // Stance ratio signal - only reliable for face-on and oblique
+  // For face-on, use lower weight since pro golfers have varying stance widths
   if (!isDTL) {
+    const stanceWeight = isFaceOn ? 0.3 : 1.0
     if (avgSignals.stanceRatio >= CLUB_DETECTION.STANCE_RATIO.DRIVER_MIN) {
-      driverScore += 1
-      signalCount++
+      driverScore += stanceWeight
+      signalCount += stanceWeight
     } else if (avgSignals.stanceRatio <= CLUB_DETECTION.STANCE_RATIO.IRON_MAX) {
-      driverScore -= 1
-      signalCount++
+      driverScore -= stanceWeight
+      signalCount += stanceWeight
     } else {
-      signalCount += 0.5
+      signalCount += stanceWeight * 0.5
     }
   }
 
@@ -870,15 +958,46 @@ export function detectClubTypeFromFrames(
   }
 
   // Spine angle signal - only reliable for DTL
+  // Single threshold at 45° - no ambiguous zone
   if (!isFaceOn) {
-    if (avgSignals.spineAngle <= CLUB_DETECTION.SPINE_ANGLE.DRIVER_MAX) {
+    if (avgSignals.spineAngle <= CLUB_DETECTION.SPINE_ANGLE.THRESHOLD) {
       driverScore += 1
       signalCount++
-    } else if (avgSignals.spineAngle >= CLUB_DETECTION.SPINE_ANGLE.IRON_MIN) {
+    } else {
       driverScore -= 1
       signalCount++
+    }
+  }
+
+  // Arm extension signal - reliable for face-on and oblique (uses Y-axis)
+  // Higher extension = more bent over = iron
+  // For face-on, this is the primary signal - use higher weight
+  if (!isDTL) {
+    const armWeight = isFaceOn ? 1.2 : 0.8
+    if (avgSignals.armExtension <= CLUB_DETECTION.ARM_EXTENSION.DRIVER_MAX) {
+      driverScore += armWeight
+      signalCount += armWeight
+    } else if (avgSignals.armExtension >= CLUB_DETECTION.ARM_EXTENSION.IRON_MIN) {
+      driverScore -= armWeight
+      signalCount += armWeight
     } else {
-      signalCount += 0.5
+      signalCount += armWeight * 0.5
+    }
+  }
+
+  // Knee flex signal - only reliable for DTL and oblique
+  // Face-on: knee flex happens in Z-axis (toward/away from camera), not visible
+  // More flex (lower angle) = iron
+  if (!isFaceOn) {
+    const kneeWeight = 0.6
+    if (avgSignals.kneeFlexAngle >= CLUB_DETECTION.KNEE_FLEX.DRIVER_MIN) {
+      driverScore += kneeWeight
+      signalCount += kneeWeight
+    } else if (avgSignals.kneeFlexAngle <= CLUB_DETECTION.KNEE_FLEX.IRON_MAX) {
+      driverScore -= kneeWeight
+      signalCount += kneeWeight
+    } else {
+      signalCount += kneeWeight * 0.5
     }
   }
 

@@ -1,6 +1,5 @@
 import type { DetectorInput, DetectorResult, MistakeDetector } from '../types'
 import { createNotDetectedResult, getPhaseFrameIndices } from '../types'
-import { POSE_LANDMARKS } from '@/types/pose'
 import { calculateRotationFromWidth } from '@/utils/angleCalculations'
 
 /**
@@ -15,7 +14,7 @@ import { calculateRotationFromWidth } from '@/utils/angleCalculations'
  * Only reliable for face-on camera angle
  */
 export const detectIncompleteFollowThrough: MistakeDetector = (input: DetectorInput): DetectorResult => {
-  const { frames, phaseSegments, cameraAngle, isRightHanded } = input
+  const { frames, phaseSegments, cameraAngle } = input
 
   // Only reliable for face-on camera angle
   if (cameraAngle !== 'face-on') {

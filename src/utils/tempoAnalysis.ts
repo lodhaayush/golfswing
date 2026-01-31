@@ -10,7 +10,10 @@ export function consolidatePhases(phases: PhaseFrame[]): PhaseSegment[] {
   const segments: PhaseSegment[] = []
   let currentSegment: PhaseSegment | null = null
 
-  for (const frame of phases) {
+  for (let i = 0; i < phases.length; i++) {
+    const frame = phases[i]
+    const nextFrame = phases[i + 1]
+
     if (!currentSegment || currentSegment.phase !== frame.phase) {
       // Start a new segment
       if (currentSegment) {
@@ -21,13 +24,14 @@ export function consolidatePhases(phases: PhaseFrame[]): PhaseSegment[] {
         startFrame: frame.frameIndex,
         endFrame: frame.frameIndex,
         startTime: frame.timestamp,
-        endTime: frame.timestamp,
+        // endTime extends to next frame's timestamp (no gaps between phases)
+        endTime: nextFrame ? nextFrame.timestamp : frame.timestamp,
         duration: 0,
       }
     } else {
-      // Extend current segment
+      // Extend current segment - endTime is the START of the next frame (no gaps)
       currentSegment.endFrame = frame.frameIndex
-      currentSegment.endTime = frame.timestamp
+      currentSegment.endTime = nextFrame ? nextFrame.timestamp : frame.timestamp
       currentSegment.duration = currentSegment.endTime - currentSegment.startTime
     }
   }

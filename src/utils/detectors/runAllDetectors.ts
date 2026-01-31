@@ -1,4 +1,5 @@
 import type { DetectorInput, DetectorResult } from './types'
+import { logger } from '@/utils/debugLogger'
 
 // Setup detectors
 import { detectPoorPosture } from './setup/poorPosture'
@@ -11,7 +12,6 @@ import { detectInsufficientShoulderTurn } from './backswing/insufficientShoulder
 import { detectOverRotation } from './backswing/overRotation'
 import { detectBentLeadArm } from './backswing/bentLeadArm'
 import { detectLiftingHead } from './backswing/liftingHead'
-import { detectRushingBackswing } from './backswing/rushingBackswing'
 
 // Downswing detectors
 import { detectEarlyExtension } from './downswing/earlyExtension'
@@ -39,14 +39,13 @@ const ALL_DETECTORS = [
   // Setup (2)
   detectPoorPosture,
   detectStanceWidthIssue,
-  // Backswing (7)
+  // Backswing (6)
   detectSwaying,
   detectReversePivot,
   detectInsufficientShoulderTurn,
   detectOverRotation,
   detectBentLeadArm,
   detectLiftingHead,
-  detectRushingBackswing,
   // Downswing (4)
   detectEarlyExtension,
   detectHangingBack,
@@ -69,9 +68,29 @@ const ALL_DETECTORS = [
  * Includes both detected and non-detected results with confidence > 0
  */
 export function runAllDetectors(input: DetectorInput): DetectorResult[] {
-  return ALL_DETECTORS
+  logger.info('Running all detectors:', {
+    cameraAngle: input.cameraAngle,
+    clubType: input.clubType,
+    isRightHanded: input.isRightHanded,
+    totalFrames: input.frames.length,
+    phases: input.phaseSegments.map(p => p.phase),
+  })
+
+  const results = ALL_DETECTORS
     .map(detector => detector(input))
     .filter(result => result.detected || result.confidence > 0)
+
+  logger.info('Detector results summary:', {
+    totalDetectors: ALL_DETECTORS.length,
+    resultsWithConfidence: results.length,
+    detected: results.filter(r => r.detected).map(r => ({
+      id: r.mistakeId,
+      severity: r.severity,
+      confidence: r.confidence,
+    })),
+  })
+
+  return results
 }
 
 /**

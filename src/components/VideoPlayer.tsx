@@ -150,6 +150,18 @@ export function VideoPlayer({
     return `${mins}:${secs.toString().padStart(2, '0')}.${ms}`
   }
 
+  // Calculate current frame number based on pose frames or estimated fps
+  const getCurrentFrameNumber = (): number | null => {
+    if (poseFrames.length === 0 || duration === 0) return null
+
+    // Estimate fps from pose frames
+    const fps = poseFrames.length / duration
+    return Math.round(currentTime * fps)
+  }
+
+  const currentFrame = getCurrentFrameNumber()
+  const totalFrames = poseFrames.length > 0 ? poseFrames.length : null
+
   const hasPoseData = poseFrames.length > 0
 
   return (
@@ -178,9 +190,12 @@ export function VideoPlayer({
       <div className="mt-4 space-y-4">
         {/* Seek Bar */}
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-400 w-16 text-right font-mono">
-            {formatTime(currentTime)}
-          </span>
+          <div className="text-sm text-gray-400 w-24 text-right font-mono">
+            <div>{formatTime(currentTime)}</div>
+            {currentFrame !== null && (
+              <div className="text-xs text-gray-500">F{currentFrame}</div>
+            )}
+          </div>
           <input
             type="range"
             min={0}
@@ -196,9 +211,12 @@ export function VideoPlayer({
               [&::-webkit-slider-thumb]:rounded-full
               [&::-webkit-slider-thumb]:cursor-pointer"
           />
-          <span className="text-sm text-gray-400 w-16 font-mono">
-            {formatTime(duration)}
-          </span>
+          <div className="text-sm text-gray-400 w-24 font-mono">
+            <div>{formatTime(duration)}</div>
+            {totalFrames !== null && (
+              <div className="text-xs text-gray-500">F{totalFrames}</div>
+            )}
+          </div>
         </div>
 
         {/* Playback Controls */}

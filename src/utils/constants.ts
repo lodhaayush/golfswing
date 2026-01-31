@@ -216,6 +216,45 @@ export const PHASE_DETECTION = {
 } as const
 
 // =============================================================================
+// SLOW-MOTION DETECTION CONSTANTS
+// =============================================================================
+
+export const SLOW_MOTION = {
+  /**
+   * Frame count threshold to consider video as slow-motion
+   * Normal swing videos typically have 30-70 frames
+   * Slow-motion videos typically have 120+ frames
+   */
+  FRAME_COUNT_THRESHOLD: 100,
+  /**
+   * Scaling factor for search windows in slow-motion videos
+   * Applied to: velocity drop search, hand height search, address detection
+   */
+  SEARCH_WINDOW_SCALE: 3.0,
+  /**
+   * Smoothing window scale for slow-motion (more frames = more noise to smooth)
+   */
+  SMOOTHING_WINDOW_SCALE: 2.0,
+  /**
+   * Address detection is more sensitive in slow-motion
+   * Use lower velocity multiplier to catch earlier movement
+   */
+  ADDRESS_VELOCITY_MULTIPLIER: 1.05,
+  /**
+   * Hand movement threshold is lower for slow-motion (smaller movements visible)
+   */
+  ADDRESS_HAND_MOVEMENT_THRESHOLD: 0.005,
+  /**
+   * Use fewer baseline frames for slow-motion to avoid including early movement
+   */
+  ADDRESS_BASELINE_FRAMES: 3,
+  /**
+   * Lower peak velocity fraction for slow-motion address detection
+   */
+  ADDRESS_PEAK_VELOCITY_FRACTION: 0.02,
+} as const
+
+// =============================================================================
 // CAMERA ANGLE DETECTION CONSTANTS
 // =============================================================================
 
@@ -250,12 +289,11 @@ export const TEMPO = {
 export const CLUB_DETECTION = {
   /**
    * Stance width ratio thresholds (stance width / hip width)
-   * Driver stance is typically 1.5-2x hip width
-   * Iron stance is typically 1.0-1.3x hip width
+   * Single threshold - no ambiguous zone
+   * Based on observed values: drivers ~2.6-2.7, irons ~2.2
    */
   STANCE_RATIO: {
-    DRIVER_MIN: 1.4,    // Above this suggests driver
-    IRON_MAX: 1.25,     // Below this suggests iron
+    THRESHOLD: 2.35,    // >= this = driver, < this = iron
   },
   /**
    * Hand distance from hip center (normalized to shoulder width)
@@ -269,11 +307,31 @@ export const CLUB_DETECTION = {
    * Spine angle at address (degrees from vertical)
    * Driver = more upright (smaller angle)
    * Iron = more bent over (larger angle)
-   * Note: Many golfers bend 35-45° even with driver, so thresholds are generous
+   * Single threshold at 45° - no ambiguous zone
    */
   SPINE_ANGLE: {
-    DRIVER_MAX: 42,     // Below this suggests driver (more upright)
-    IRON_MIN: 50,       // Above this suggests iron (more bent)
+    THRESHOLD: 45,      // <= 45° = driver, > 45° = iron
+  },
+  /**
+   * Arm extension ratio (vertical drop from shoulders to hands / body height)
+   * Driver = more upright stance, hands higher relative to body
+   * Iron = more bent over, hands drop lower relative to body
+   * Works reliably in face-on view (uses Y-axis)
+   * Based on observed values: drivers ~0.448-0.449, irons ~0.460
+   */
+  ARM_EXTENSION: {
+    DRIVER_MAX: 0.45,   // Below this suggests driver (more upright)
+    IRON_MIN: 0.455,    // Above this suggests iron (more bent)
+  },
+  /**
+   * Knee flex angle at address (degrees)
+   * Driver = less knee flex (more upright stance)
+   * Iron = more knee flex (lower to the ball)
+   * Works reliably in face-on view
+   */
+  KNEE_FLEX: {
+    DRIVER_MIN: 155,    // Above this (straighter) suggests driver
+    IRON_MAX: 150,      // Below this (more bent) suggests iron
   },
   /** Number of frames to sample for detection */
   SAMPLE_FRAMES: 5,

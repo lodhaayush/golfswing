@@ -1,22 +1,32 @@
 import type { DetectorInput, DetectorResult, MistakeDetector } from '../types'
 import { createNotDetectedResult, getPhaseFrameIndices } from '../types'
 import { POSE_LANDMARKS } from '@/types/pose'
+import { CLUB_DETECTION } from '@/utils/constants'
 
 /**
  * STANCE_WIDTH_ISSUE detector
  * Detects if the golfer's stance width is inappropriate for the club type
  *
+ * IMPORTANT: This detector only runs when the user has manually overridden
+ * the detected club type. If the club type was auto-detected from stance width,
+ * it would be circular logic to then flag the stance width as wrong.
+ *
  * Detection method:
  * - Calculate stance width ratio (ankle width / hip width)
- * - Compare against ideal ranges for driver vs iron
+ * - Compare against the same thresholds used for club type detection
  *
- * Thresholds (from constants):
- * - Driver: should be >= 1.4x hip width
- * - Iron: should be <= 1.25x hip width
- * - Middle ground (1.25-1.4) is acceptable for both
+ * Thresholds (from CLUB_DETECTION constants):
+ * - Driver: should be >= STANCE_RATIO.THRESHOLD (2.35)
+ * - Iron: should be < STANCE_RATIO.THRESHOLD (2.35)
  */
 export const detectStanceWidthIssue: MistakeDetector = (input: DetectorInput): DetectorResult => {
-  const { frames, phaseSegments, cameraAngle, clubType } = input
+  const { frames, phaseSegments, cameraAngle, clubType, clubTypeOverridden } = input
+
+  // Only run this detector if user manually overrode the club type
+  // Auto-detected club type uses stance width, so flagging it would be circular logic
+  if (!clubTypeOverridden) {
+    return createNotDetectedResult('STANCE_WIDTH_ISSUE', 'Club type was auto-detected (no user override)')
+  }
 
   // Not reliable for DTL - ankles may be occluded
   if (cameraAngle === 'dtl') {
@@ -55,13 +65,11 @@ export const detectStanceWidthIssue: MistakeDetector = (input: DetectorInput): D
 
   const stanceRatio = stanceWidth / hipWidth
 
-  // Define thresholds
-  const DRIVER_MIN = 1.4
-  const IRON_MAX = 1.25
+  // Use the same threshold as club type detection for consistency
+  const THRESHOLD = CLUB_DETECTION.STANCE_RATIO.THRESHOLD
 
   // Only flag issues if we know the club type
   if (clubType === 'unknown') {
-    // Can't determine if stance is appropriate without knowing club
     return createNotDetectedResult('STANCE_WIDTH_ISSUE', 'Club type unknown - cannot evaluate stance width')
   }
 
@@ -69,17 +77,18 @@ export const detectStanceWidthIssue: MistakeDetector = (input: DetectorInput): D
   let severity = 0
   let message = ''
 
-  if (clubType === 'driver' && stanceRatio < DRIVER_MIN) {
+  if (clubType === 'driver' && stanceRatio < THRESHOLD) {
+    // User said it's a driver but stance looks like an iron
     detected = true
-    const deviation = DRIVER_MIN - stanceRatio
-    severity = Math.min(100, (deviation / 0.3) * 100)
-    message = `Stance is too narrow for driver (${stanceRatio.toFixed(2)}x hip width). Widen your stance for better stability.`
-  } else if (clubType === 'iron' && stanceRatio > IRON_MAX + 0.2) {
-    // Allow some tolerance for iron stance being slightly wide
+    const deviation = THRESHOLD - stanceRatio
+    severity = Math.min(100, (deviation / 0.5) * 100)
+    message = `Stance is too narrow for driver (${stanceRatio.toFixed(2)}x hip width, should be >= ${THRESHOLD}). Widen your stance for better stability.`
+  } else if (clubType === 'iron' && stanceRatio >= THRESHOLD) {
+    // User said it's an iron but stance looks like a driver
     detected = true
-    const deviation = stanceRatio - (IRON_MAX + 0.2)
-    severity = Math.min(100, (deviation / 0.3) * 100)
-    message = `Stance is too wide for iron (${stanceRatio.toFixed(2)}x hip width). A narrower stance gives better control.`
+    const deviation = stanceRatio - THRESHOLD
+    severity = Math.min(100, (deviation / 0.5) * 100)
+    message = `Stance is too wide for iron (${stanceRatio.toFixed(2)}x hip width, should be < ${THRESHOLD}). A narrower stance gives better control.`
   }
 
   if (!detected) {

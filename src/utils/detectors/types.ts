@@ -1,4 +1,4 @@
-import type { PoseFrame, Landmark } from '@/types/pose'
+import type { PoseFrame } from '@/types/pose'
 import type { PhaseSegment, SwingMetrics, TempoMetrics, ClubType } from '@/types/analysis'
 import type { SwingMistakeId, SwingMistakeCategory } from '@/types/swingMistakes'
 import type { CameraAngle } from '@/utils/angleCalculations'
@@ -15,6 +15,7 @@ export interface DetectorInput {
   isRightHanded: boolean
   cameraAngle: CameraAngle
   clubType: ClubType
+  clubTypeOverridden: boolean  // True if user manually set the club type
 }
 
 /**
@@ -56,7 +57,6 @@ export function getCategoryFromMistakeId(mistakeId: SwingMistakeId): SwingMistak
     BENT_LEAD_ARM: 'backswing',
     LIFTING_HEAD: 'backswing',
     POOR_WRIST_HINGE: 'backswing',
-    RUSHING_BACKSWING: 'backswing',
     // Downswing
     OVER_THE_TOP: 'downswing',
     CASTING: 'downswing',

@@ -1,4 +1,5 @@
 import type { PoseFrame } from '@/types/pose'
+import { POSE_LANDMARKS } from '@/types/pose'
 import type { AnalysisResult, SwingMetrics, PhaseSegment, ClubType } from '@/types/analysis'
 import type { CameraAngle } from './angleCalculations'
 import { detectSwingPhases, type PhaseFrame as DetectedPhaseFrame } from './phaseDetection'
@@ -42,6 +43,19 @@ function angularDifference(angle1: number, angle2: number): number {
 }
 
 /**
+ * Calculate the median of an array of numbers
+ * Returns undefined if the array is empty
+ */
+function calculateMedian(values: number[]): number | undefined {
+  if (values.length === 0) return undefined
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 !== 0
+    ? sorted[mid]
+    : (sorted[mid - 1] + sorted[mid]) / 2
+}
+
+/**
  * Calculate aggregate swing metrics from phase frames
  * Rotations are calculated differently based on camera angle:
  * - Face-on: Uses width-narrowing method (reliable)
@@ -58,7 +72,7 @@ function calculateSwingMetrics(
   const addressPhaseIdx = phases.findIndex((p) => p.phase === 'address')
   const topPhaseIdx = phases.findIndex((p) => p.phase === 'top')
   const impactPhaseIdx = phases.findIndex((p) => p.phase === 'impact')
-  const followThroughPhaseIdx = phases.findIndex((p) => p.phase === 'follow-through')
+  // followThroughPhaseIdx is available if needed in future
 
   // Find end of address phase (last consecutive address frame)
   let addressEndIdx = addressPhaseIdx
@@ -73,7 +87,53 @@ function calculateSwingMetrics(
   const addressFrame = addressPhaseIdx >= 0 ? phases[addressPhaseIdx] : null
   const topFrame = topPhaseIdx >= 0 ? phases[topPhaseIdx] : null
   const impactFrame = impactPhaseIdx >= 0 ? phases[impactPhaseIdx] : null
-  // followThroughFrame is only needed for its index, which we already have
+
+  // Debug: Log lead arm landmarks at top of backswing
+  if (topPhaseIdx >= 0) {
+    const topLandmarks = frames[topPhaseIdx]?.landmarks
+    if (topLandmarks) {
+      // Lead arm is left for right-handed, right for left-handed
+      const shoulderIdx = isRightHanded ? POSE_LANDMARKS.LEFT_SHOULDER : POSE_LANDMARKS.RIGHT_SHOULDER
+      const elbowIdx = isRightHanded ? POSE_LANDMARKS.LEFT_ELBOW : POSE_LANDMARKS.RIGHT_ELBOW
+      const wristIdx = isRightHanded ? POSE_LANDMARKS.LEFT_WRIST : POSE_LANDMARKS.RIGHT_WRIST
+
+      const shoulder = topLandmarks[shoulderIdx]
+      const elbow = topLandmarks[elbowIdx]
+      const wrist = topLandmarks[wristIdx]
+
+      logger.info('Lead Arm Landmarks at Top:', {
+        cameraAngle,
+        isRightHanded,
+        leadArmExtension: topFrame?.metrics.leftArmExtension?.toFixed(1) + '° (2D)',
+        shoulder: { x: shoulder?.x?.toFixed(3), y: shoulder?.y?.toFixed(3), vis: shoulder?.visibility?.toFixed(2) },
+        elbow: { x: elbow?.x?.toFixed(3), y: elbow?.y?.toFixed(3), vis: elbow?.visibility?.toFixed(2) },
+        wrist: { x: wrist?.x?.toFixed(3), y: wrist?.y?.toFixed(3), vis: wrist?.visibility?.toFixed(2) },
+      })
+    }
+  }
+
+  // Calculate median spine angle from address phase for robustness against outliers
+  const addressSpineAngles: number[] = []
+  for (let i = addressPhaseIdx; i <= addressEndIdx && i >= 0; i++) {
+    const spineAngle = phases[i]?.metrics.spineAngle
+    if (spineAngle !== undefined && !isNaN(spineAngle)) {
+      addressSpineAngles.push(spineAngle)
+    }
+  }
+  const medianAddressSpineAngle = calculateMedian(addressSpineAngles) ?? (addressFrame?.metrics.spineAngle ?? 0)
+
+  // Calculate median spine angle around impact (±2 frames) for robustness
+  const impactSpineAngles: number[] = []
+  const impactWindow = 2
+  const impactStart = Math.max(0, impactPhaseIdx - impactWindow)
+  const impactEnd = Math.min(phases.length - 1, impactPhaseIdx + impactWindow)
+  for (let i = impactStart; i <= impactEnd && impactPhaseIdx >= 0; i++) {
+    const spineAngle = phases[i]?.metrics.spineAngle
+    if (spineAngle !== undefined && !isNaN(spineAngle)) {
+      impactSpineAngles.push(spineAngle)
+    }
+  }
+  const medianImpactSpineAngle = calculateMedian(impactSpineAngles) ?? (impactFrame?.metrics.spineAngle ?? 0)
 
   // Get address landmarks for baseline - use array index, not frameIndex
   const addressLandmarks = addressPhaseIdx >= 0
@@ -177,9 +237,9 @@ function calculateSwingMetrics(
     maxHipRotation,
     maxShoulderRotation,
     maxXFactor,
-    addressSpineAngle: addressFrame?.metrics.spineAngle ?? 0,
+    addressSpineAngle: medianAddressSpineAngle,
     topSpineAngle: topFrame?.metrics.spineAngle ?? 0,
-    impactSpineAngle: impactFrame?.metrics.spineAngle ?? 0,
+    impactSpineAngle: medianImpactSpineAngle,
     topLeadArmExtension: topFrame ? getLeadArmExtension(topFrame.metrics) : 180,
     impactLeadArmExtension: impactFrame ? getLeadArmExtension(impactFrame.metrics) : 180,
     addressKneeFlex: addressFrame ? getLeadKneeFlex(addressFrame.metrics) : 180,
@@ -374,12 +434,23 @@ function calculateMistakePenalty(detectedMistakes: DetectorResult[]): number {
 }
 
 /**
+ * Options for swing analysis
+ */
+export interface AnalyzeSwingOptions {
+  /** Override the auto-detected club type */
+  clubTypeOverride?: ClubType
+}
+
+/**
  * Main function to analyze a complete golf swing
  */
 export function analyzeSwing(
   frames: PoseFrame[],
-  videoId: string
+  videoId: string,
+  options?: AnalyzeSwingOptions
 ): AnalysisResult {
+  const clubTypeOverride = options?.clubTypeOverride
+
   // Detect camera angle from early frames
   const cameraAngleResult = detectCameraAngleFromFrames(frames.map(f => f.landmarks))
   logger.info('Camera Angle Detection:', {
@@ -422,17 +493,36 @@ export function analyzeSwing(
     : frames.map(f => f.landmarks)
 
   const clubTypeResult = detectClubTypeFromFrames(clubDetectionFrames, cameraAngleResult.angle)
+
+  // Use override if provided, otherwise use detected value
+  const finalClubType: ClubType = clubTypeOverride ?? clubTypeResult.clubType
+  const clubTypeOverridden = clubTypeOverride !== undefined
+
   logger.info('Club Type Detection:', {
-    clubType: clubTypeResult.clubType,
+    clubType: finalClubType,
+    detectedClubType: clubTypeResult.clubType,
+    overridden: clubTypeOverridden,
     confidence: clubTypeResult.confidence.toFixed(2),
     stanceRatio: clubTypeResult.signals.stanceRatio.toFixed(2),
     handDistance: clubTypeResult.signals.handDistance.toFixed(2),
     spineAngle: clubTypeResult.signals.spineAngle.toFixed(1),
+    armExtension: clubTypeResult.signals.armExtension.toFixed(3),
+    kneeFlexAngle: clubTypeResult.signals.kneeFlexAngle.toFixed(1),
     sampledFrames: `${sampleStartIdx}-${sampleEndIdx}`,
   })
 
   // Consolidate phases into segments
   const phaseSegments: PhaseSegment[] = consolidatePhases(phaseResult.phases)
+
+  // Log phase segments in copy-paste format for proVideos.ts
+  logger.info('Phase Segments for proVideos.ts:', phaseSegments.map(seg => ({
+    phase: seg.phase,
+    startFrame: seg.startFrame,
+    endFrame: seg.endFrame,
+    startTime: Number(seg.startTime.toFixed(3)),
+    endTime: Number(seg.endTime.toFixed(3)),
+    duration: Number(seg.duration.toFixed(3)),
+  })))
 
   // Calculate tempo metrics
   const tempo = calculateTempoMetrics(phaseSegments)
@@ -463,7 +553,8 @@ export function analyzeSwing(
     tempo,
     isRightHanded: phaseResult.isRightHanded,
     cameraAngle: cameraAngleResult.angle,
-    clubType: clubTypeResult.clubType,
+    clubType: finalClubType,
+    clubTypeOverridden,
   }
   const detectedMistakes = getDetectedMistakes(detectorInput)
 
@@ -473,7 +564,7 @@ export function analyzeSwing(
   })
 
   // Calculate overall score with mistake penalty
-  const baseScore = calculateOverallScore(metrics, tempoEvaluation.score, cameraAngleResult.angle, clubTypeResult.clubType)
+  const baseScore = calculateOverallScore(metrics, tempoEvaluation.score, cameraAngleResult.angle, finalClubType)
   const mistakePenalty = calculateMistakePenalty(detectedMistakes)
   const overallScore = Math.max(0, baseScore - mistakePenalty)
 
@@ -496,8 +587,9 @@ export function analyzeSwing(
     overallScore,
     cameraAngle: cameraAngleResult.angle,
     cameraAngleConfidence: cameraAngleResult.confidence,
-    clubType: clubTypeResult.clubType,
-    clubTypeConfidence: clubTypeResult.confidence,
+    clubType: finalClubType,
+    clubTypeConfidence: clubTypeOverridden ? 1.0 : clubTypeResult.confidence,
+    clubTypeOverridden,
     detectedMistakes,
   }
 }

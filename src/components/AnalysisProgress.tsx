@@ -62,10 +62,12 @@ export function AnalysisProgress({ phase, progress, message, onCancel }: Analysi
         </div>
 
         {/* Status Message */}
-        <div className="flex items-center justify-between text-sm">
-          <span className={isError ? 'text-red-400' : 'text-gray-400'}>
-            {message}
-          </span>
+        <div className="flex items-center justify-end text-sm">
+          {isError && (
+            <span className="text-red-400">
+              {message}
+            </span>
+          )}
           {isActive && (
             <span className="text-green-400 font-medium">
               {progressPercent}%

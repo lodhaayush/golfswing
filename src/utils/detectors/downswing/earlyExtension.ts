@@ -1,62 +1,76 @@
 import type { DetectorInput, DetectorResult, MistakeDetector } from '../types'
 import { createNotDetectedResult, getPhaseFrameIndices } from '../types'
 import { POSE_LANDMARKS } from '@/types/pose'
+import { logger } from '@/utils/debugLogger'
 
 /**
  * EARLY_EXTENSION detector
- * Detects when hips thrust toward the ball during downswing
+ * Detects when hips thrust toward the ball during downswing (losing the "tush line")
  *
  * Detection method:
- * - Track hip center Y-position (vertical) during downswing
- * - In MediaPipe, Y increases downward
- * - Early extension = hips move up (Y decreases) during downswing
- * - Golfer "stands up" out of posture
+ * - Track hip position relative to ankles during downswing
+ * - In DTL view, early extension = hips moving forward relative to feet
+ * - Measure horizontal distance between hip center and ankle center
+ * - If hips move significantly forward from address position, detect early extension
  *
  * Only reliable for DTL and oblique camera angles
  */
 export const detectEarlyExtension: MistakeDetector = (input: DetectorInput): DetectorResult => {
   const { frames, phaseSegments, cameraAngle } = input
 
-  // Better for DTL camera angle where vertical movement is visible
+  // Only reliable for DTL camera angle where forward hip movement is visible
   if (cameraAngle === 'face-on') {
-    return createNotDetectedResult('EARLY_EXTENSION', 'More reliable for DTL camera angle')
+    logger.info('EARLY_EXTENSION: Skipped (face-on camera)')
+    return createNotDetectedResult('EARLY_EXTENSION', 'Requires DTL camera angle')
   }
 
-  // Get downswing phase
+  logger.info('EARLY_EXTENSION: Running detection', { cameraAngle })
+
+  // Get required phases
+  const addressPhase = getPhaseFrameIndices(phaseSegments, 'address')
   const downswingPhase = getPhaseFrameIndices(phaseSegments, 'downswing')
   const topPhase = getPhaseFrameIndices(phaseSegments, 'top')
   const impactPhase = getPhaseFrameIndices(phaseSegments, 'impact')
 
-  if (!downswingPhase || !topPhase) {
+  if (!addressPhase || !downswingPhase || !topPhase) {
     return createNotDetectedResult('EARLY_EXTENSION', 'Required phases not detected')
   }
 
-  // Get hip position at top of backswing (reference)
-  const topIdx = topPhase.startFrame
-  const topLandmarks = frames[topIdx]?.landmarks
-  if (!topLandmarks) {
-    return createNotDetectedResult('EARLY_EXTENSION', 'No landmarks at top')
+  // Get hip-to-ankle relationship at address (the "tush line" reference)
+  const addressIdx = addressPhase.endFrame
+  const addressLandmarks = frames[addressIdx]?.landmarks
+  if (!addressLandmarks) {
+    return createNotDetectedResult('EARLY_EXTENSION', 'No landmarks at address')
   }
 
-  const topLeftHip = topLandmarks[POSE_LANDMARKS.LEFT_HIP]
-  const topRightHip = topLandmarks[POSE_LANDMARKS.RIGHT_HIP]
-  if (!topLeftHip || !topRightHip) {
-    return createNotDetectedResult('EARLY_EXTENSION', 'Missing hip landmarks at top')
+  const addressLeftHip = addressLandmarks[POSE_LANDMARKS.LEFT_HIP]
+  const addressRightHip = addressLandmarks[POSE_LANDMARKS.RIGHT_HIP]
+  const addressLeftAnkle = addressLandmarks[POSE_LANDMARKS.LEFT_ANKLE]
+  const addressRightAnkle = addressLandmarks[POSE_LANDMARKS.RIGHT_ANKLE]
+
+  if (!addressLeftHip || !addressRightHip || !addressLeftAnkle || !addressRightAnkle) {
+    return createNotDetectedResult('EARLY_EXTENSION', 'Missing landmarks at address')
   }
-  const topHipCenterY = (topLeftHip.y + topRightHip.y) / 2
+
+  const addressHipCenterY = (addressLeftHip.y + addressRightHip.y) / 2
+  const addressAnkleCenterY = (addressLeftAnkle.y + addressRightAnkle.y) / 2
+
+  // Reference distance from hips to ankles at address (in Y-axis for DTL view)
+  // In DTL, Y-axis shows forward/back position relative to camera
+  const addressHipAnkleOffset = addressHipCenterY - addressAnkleCenterY
 
   // Get torso height for normalization
-  const topLeftShoulder = topLandmarks[POSE_LANDMARKS.LEFT_SHOULDER]
-  if (!topLeftShoulder || !topLeftHip) {
+  const addressLeftShoulder = addressLandmarks[POSE_LANDMARKS.LEFT_SHOULDER]
+  if (!addressLeftShoulder) {
     return createNotDetectedResult('EARLY_EXTENSION', 'Missing shoulder landmarks')
   }
-  const torsoHeight = Math.abs(topLeftShoulder.y - topLeftHip.y)
+  const torsoHeight = Math.abs(addressLeftShoulder.y - addressLeftHip.y)
   if (torsoHeight === 0) {
     return createNotDetectedResult('EARLY_EXTENSION', 'Invalid torso height')
   }
 
-  // Track minimum hip Y (highest position) during downswing through impact
-  let minHipY = topHipCenterY
+  // Track maximum forward hip thrust during downswing through impact
+  let maxForwardThrust = 0
   const endIdx = impactPhase ? impactPhase.endFrame : downswingPhase.endFrame
 
   for (let i = topPhase.startFrame; i <= endIdx && i < frames.length; i++) {
@@ -65,21 +79,42 @@ export const detectEarlyExtension: MistakeDetector = (input: DetectorInput): Det
 
     const leftHip = landmarks[POSE_LANDMARKS.LEFT_HIP]
     const rightHip = landmarks[POSE_LANDMARKS.RIGHT_HIP]
-    if (leftHip && rightHip) {
-      const hipCenterY = (leftHip.y + rightHip.y) / 2
-      minHipY = Math.min(minHipY, hipCenterY)
+    const leftAnkle = landmarks[POSE_LANDMARKS.LEFT_ANKLE]
+    const rightAnkle = landmarks[POSE_LANDMARKS.RIGHT_ANKLE]
+
+    if (!leftHip || !rightHip || !leftAnkle || !rightAnkle) continue
+
+    const hipCenterY = (leftHip.y + rightHip.y) / 2
+    const ankleCenterY = (leftAnkle.y + rightAnkle.y) / 2
+    const currentHipAnkleOffset = hipCenterY - ankleCenterY
+
+    // Forward thrust = hips moving forward relative to ankles compared to address
+    // In DTL, lower Y = forward toward camera/ball
+    const forwardThrust = addressHipAnkleOffset - currentHipAnkleOffset
+    if (forwardThrust > maxForwardThrust) {
+      maxForwardThrust = forwardThrust
     }
   }
 
-  // Calculate hip rise (negative Y change = upward)
-  const hipRise = topHipCenterY - minHipY
-  const normalizedRise = hipRise / torsoHeight
+  // Normalize by torso height
+  const normalizedThrust = maxForwardThrust / torsoHeight
 
   // Threshold for detecting early extension
-  const EXTENSION_THRESHOLD = 0.08 // 8% of torso height
-  const SEVERE_THRESHOLD = 0.15
+  // This measures how much the hips have moved forward relative to the feet
+  const EXTENSION_THRESHOLD = 0.12 // 12% of torso height
+  const SEVERE_THRESHOLD = 0.20
 
-  if (normalizedRise < EXTENSION_THRESHOLD) {
+  logger.info('EARLY_EXTENSION Debug:', {
+    addressHipAnkleOffset: addressHipAnkleOffset.toFixed(3),
+    maxForwardThrust: maxForwardThrust.toFixed(3),
+    normalizedThrust: (normalizedThrust * 100).toFixed(1) + '%',
+    torsoHeight: torsoHeight.toFixed(3),
+    threshold: (EXTENSION_THRESHOLD * 100).toFixed(1) + '%',
+    detected: normalizedThrust >= EXTENSION_THRESHOLD,
+    note: 'WARNING: Using Y-axis which measures vertical movement, not forward movement for DTL',
+  })
+
+  if (normalizedThrust < EXTENSION_THRESHOLD) {
     return {
       mistakeId: 'EARLY_EXTENSION',
       detected: false,
@@ -89,13 +124,13 @@ export const detectEarlyExtension: MistakeDetector = (input: DetectorInput): Det
     }
   }
 
-  const severity = Math.min(100, (normalizedRise / (SEVERE_THRESHOLD + 0.05)) * 100)
+  const severity = Math.min(100, (normalizedThrust / (SEVERE_THRESHOLD + 0.08)) * 100)
 
   let message: string
-  if (normalizedRise > SEVERE_THRESHOLD) {
-    message = 'Significant early extension - hips are thrusting toward the ball. Maintain your posture through impact.'
+  if (normalizedThrust > SEVERE_THRESHOLD) {
+    message = 'Significant early extension - hips thrusting toward the ball. Focus on maintaining your tush line.'
   } else {
-    message = 'Slight early extension detected. Focus on maintaining spine angle during the downswing.'
+    message = 'Slight early extension detected. Keep your hips back through the downswing.'
   }
 
   return {
@@ -104,6 +139,6 @@ export const detectEarlyExtension: MistakeDetector = (input: DetectorInput): Det
     confidence: 0.7,
     severity,
     message,
-    details: `Hips rose ${(normalizedRise * 100).toFixed(1)}% of torso height during downswing`,
+    details: `Hips moved forward ${(normalizedThrust * 100).toFixed(1)}% of torso height`,
   }
 }

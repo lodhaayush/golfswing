@@ -1,5 +1,6 @@
 import type { DetectorInput, DetectorResult, MistakeDetector } from '../types'
 import { TEMPO } from '@/utils/constants'
+import { logger } from '@/utils/debugLogger'
 
 /**
  * POOR_TEMPO_RATIO detector
@@ -22,6 +23,17 @@ export const detectPoorTempoRatio: MistakeDetector = (input: DetectorInput): Det
 
   // Calculate deviation from ideal
   const deviation = Math.abs(tempoRatio - IDEAL_RATIO)
+
+  logger.info('POOR_TEMPO_RATIO Debug:', {
+    tempoRatio: tempoRatio.toFixed(2),
+    idealRatio: IDEAL_RATIO,
+    deviation: deviation.toFixed(2),
+    excellentTolerance: EXCELLENT_TOLERANCE,
+    goodTolerance: GOOD_TOLERANCE,
+    detected: deviation > GOOD_TOLERANCE,
+    backswingDuration: tempo.backswingDuration?.toFixed(2) + 's',
+    downswingDuration: tempo.downswingDuration?.toFixed(2) + 's',
+  })
 
   // Excellent or good tempo - no issue
   if (deviation <= GOOD_TOLERANCE) {

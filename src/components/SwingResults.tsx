@@ -1,5 +1,5 @@
-import { Clock, RotateCw, User, Zap, Camera, Target, Edit2, AlertTriangle, CheckCircle } from 'lucide-react'
-import { useState } from 'react'
+import { Clock, RotateCw, User, Zap, Camera, Target, Edit2, AlertTriangle, CheckCircle, Check } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import type { AnalysisResult, ClubType } from '@/types/analysis'
 import type { CameraAngle } from '@/utils/angleCalculations'
 import { formatTempoRatio, formatDuration, evaluateTempo } from '@/utils/tempoAnalysis'
@@ -11,6 +11,7 @@ interface SwingResultsProps {
   onBackToPlayer?: () => void
   onUploadNew?: () => void
   onClubTypeChange?: (clubType: ClubType) => void
+  onCompare?: () => void
 }
 
 function MetricCard({
@@ -120,12 +121,17 @@ function getClubTypeLabel(clubType: ClubType): string {
   }
 }
 
-export function SwingResults({ result, onBackToPlayer, onUploadNew, onClubTypeChange }: SwingResultsProps) {
+export function SwingResults({ result, onBackToPlayer, onUploadNew, onClubTypeChange, onCompare }: SwingResultsProps) {
   const tempoEval = evaluateTempo(result.tempo)
   const isDTL = result.cameraAngle === 'dtl'
   const isFaceOn = result.cameraAngle === 'face-on'
   const [isEditingClub, setIsEditingClub] = useState(false)
   const [selectedClub, setSelectedClub] = useState<ClubType>(result.clubType)
+
+  // Sync selectedClub when result changes (e.g., after re-analysis with override)
+  useEffect(() => {
+    setSelectedClub(result.clubType)
+  }, [result.clubType])
 
   const handleClubChange = (newClubType: ClubType) => {
     setSelectedClub(newClubType)
@@ -171,14 +177,23 @@ export function SwingResults({ result, onBackToPlayer, onUploadNew, onClubTypeCh
             {!isEditingClub ? (
               <>
                 <span>{getClubTypeLabel(selectedClub)}</span>
-                {result.clubTypeConfidence >= 0.8 && (
-                  <span className="text-green-500 text-xs">(high confidence)</span>
-                )}
-                {result.clubTypeConfidence < 0.8 && result.clubTypeConfidence >= 0.6 && (
-                  <span className="text-yellow-500 text-xs">(medium confidence)</span>
-                )}
-                {result.clubTypeConfidence < 0.6 && (
-                  <span className="text-gray-500 text-xs">(low confidence)</span>
+                {result.clubTypeOverridden ? (
+                  <span className="text-blue-400 text-xs flex items-center gap-0.5">
+                    <Check className="w-3 h-3" />
+                    (manual)
+                  </span>
+                ) : (
+                  <>
+                    {result.clubTypeConfidence >= 0.8 && (
+                      <span className="text-green-500 text-xs">(high confidence)</span>
+                    )}
+                    {result.clubTypeConfidence < 0.8 && result.clubTypeConfidence >= 0.6 && (
+                      <span className="text-yellow-500 text-xs">(medium confidence)</span>
+                    )}
+                    {result.clubTypeConfidence < 0.6 && (
+                      <span className="text-gray-500 text-xs">(low confidence)</span>
+                    )}
+                  </>
                 )}
                 <button
                   onClick={() => setIsEditingClub(true)}
@@ -394,6 +409,14 @@ export function SwingResults({ result, onBackToPlayer, onUploadNew, onClubTypeCh
             className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
           >
             Back to Player
+          </button>
+        )}
+        {onCompare && (
+          <button
+            onClick={onCompare}
+            className="px-6 py-2 bg-blue-500 hover:bg-blue-400 text-white font-medium rounded-lg transition-colors"
+          >
+            Compare to Pro
           </button>
         )}
         {onUploadNew && (

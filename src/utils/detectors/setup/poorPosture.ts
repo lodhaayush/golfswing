@@ -1,5 +1,6 @@
 import type { DetectorInput, DetectorResult, MistakeDetector } from '../types'
-import { createNotDetectedResult, getPhaseFrameIndices } from '../types'
+import { createNotDetectedResult } from '../types'
+import { logger } from '@/utils/debugLogger'
 
 /**
  * POOR_POSTURE detector
@@ -12,13 +13,14 @@ import { createNotDetectedResult, getPhaseFrameIndices } from '../types'
  *
  * Thresholds:
  * - Driver: 25-45° (more upright)
- * - Iron: 30-50° (more bent over)
+ * - Iron: 30-55° (more bent over)
  */
 export const detectPoorPosture: MistakeDetector = (input: DetectorInput): DetectorResult => {
   const { metrics, cameraAngle, clubType } = input
 
   // Skip for face-on - spine angle shows lateral tilt, not forward bend
   if (cameraAngle === 'face-on') {
+    logger.info('POOR_POSTURE: Skipped (face-on camera)')
     return createNotDetectedResult('POOR_POSTURE', 'Requires DTL or oblique camera angle for reliable detection')
   }
 
@@ -33,15 +35,25 @@ export const detectPoorPosture: MistakeDetector = (input: DetectorInput): Detect
     idealMax = 45
   } else if (clubType === 'iron') {
     idealMin = 30
-    idealMax = 50
+    idealMax = 55
   } else {
     // Unknown club - use generous range
     idealMin = 25
-    idealMax = 50
+    idealMax = 55
   }
 
   // Check if spine angle is within ideal range
   const isWithinRange = addressSpineAngle >= idealMin && addressSpineAngle <= idealMax
+
+  logger.info('POOR_POSTURE Debug:', {
+    cameraAngle,
+    clubType,
+    addressSpineAngle: addressSpineAngle.toFixed(1) + '°',
+    idealMin: idealMin + '°',
+    idealMax: idealMax + '°',
+    isWithinRange,
+    detected: !isWithinRange,
+  })
 
   if (isWithinRange) {
     return {

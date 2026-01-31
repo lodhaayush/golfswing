@@ -30,7 +30,6 @@ export { detectInsufficientShoulderTurn } from './backswing/insufficientShoulder
 export { detectOverRotation } from './backswing/overRotation'
 export { detectBentLeadArm } from './backswing/bentLeadArm'
 export { detectLiftingHead } from './backswing/liftingHead'
-export { detectRushingBackswing } from './backswing/rushingBackswing'
 
 // Downswing detectors
 export { detectEarlyExtension } from './downswing/earlyExtension'
