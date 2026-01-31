@@ -267,9 +267,15 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
     }
   }
 
+  // Detect slow-motion videos for scaling thresholds
+  const isSlowMotion = frames.length > SLOW_MOTION.FRAME_COUNT_THRESHOLD
+
   // Alternative: if hands reach their lowest point (highest Y) near the velocity peak,
   // that's a strong indicator of impact. Use wider window for slow-motion videos.
-  const handHeightCheckStart = Math.max(0, impactIdx - 3)
+  const handHeightBackwardOffset = isSlowMotion
+    ? Math.round(5 * SLOW_MOTION.SEARCH_WINDOW_SCALE)  // 15 frames for slow-mo
+    : 5  // 5 frames for normal speed
+  const handHeightCheckStart = Math.max(0, impactIdx - handHeightBackwardOffset)
   const handHeightCheckEnd = Math.min(frames.length, impactIdx + PHASE_DETECTION.HAND_HEIGHT_SEARCH_FRAMES)
   let maxHandY = -Infinity
   let maxHandYIdx = impactIdx
@@ -302,7 +308,6 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
   const distanceFromPeak = maxHandYIdx - velocityPeakIdx
 
   // Scale threshold for slow-motion videos (more frames = larger absolute differences)
-  const isSlowMotion = frames.length > SLOW_MOTION.FRAME_COUNT_THRESHOLD
   const handHeightBeforePeakThreshold = isSlowMotion
     ? Math.round(5 * SLOW_MOTION.SEARCH_WINDOW_SCALE)  // 15 frames for slow-mo
     : 5  // 5 frames for normal speed

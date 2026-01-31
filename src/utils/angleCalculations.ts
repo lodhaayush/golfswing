@@ -772,20 +772,23 @@ function calculateKneeFlexAngle(landmarks: Landmark[]): number {
   return (leftKneeAngle + rightKneeAngle) / 2
 }
 
-/**
- * Detect club type from address position landmarks
- * Uses stance width, hand position, spine angle, arm extension, and knee flex as signals
- * Camera angle determines which signals are reliable
- */
-export function detectClubType(landmarks: Landmark[], cameraAngle: CameraAngle): ClubTypeResult {
-  const stanceRatio = calculateStanceRatio(landmarks)
-  const handDistance = calculateHandDistance(landmarks)
-  const spineAngle = calculateAbsSpineAngle(landmarks)
-  const armExtension = calculateArmExtensionRatio(landmarks)
-  const kneeFlexAngle = calculateKneeFlexAngle(landmarks)
+/** Signal values used for club type detection */
+interface ClubTypeSignals {
+  stanceRatio: number
+  handDistance: number
+  spineAngle: number
+  armExtension: number
+  kneeFlexAngle: number
+}
 
-  // Score each signal for driver vs iron
-  // Positive = driver, negative = iron
+/**
+ * Determine club type from signal values
+ * This is the single source of truth for threshold logic
+ */
+function determineClubTypeFromSignals(
+  signals: ClubTypeSignals,
+  cameraAngle: CameraAngle
+): { clubType: ClubType; confidence: number } {
   let driverScore = 0
   let signalCount = 0
 
@@ -793,10 +796,9 @@ export function detectClubType(landmarks: Landmark[], cameraAngle: CameraAngle):
   const isDTL = cameraAngle === 'dtl'
 
   // Stance ratio signal - only reliable for face-on and oblique (uses X-axis)
-  // For face-on, this is the primary signal for club detection
   // Single threshold - no ambiguous zone
   if (!isDTL) {
-    if (stanceRatio >= CLUB_DETECTION.STANCE_RATIO.THRESHOLD) {
+    if (signals.stanceRatio >= CLUB_DETECTION.STANCE_RATIO.THRESHOLD) {
       driverScore += 1
       signalCount++
     } else {
@@ -810,10 +812,10 @@ export function detectClubType(landmarks: Landmark[], cameraAngle: CameraAngle):
   // DTL: shoulder width normalization is broken (shoulders stacked in X)
   if (!isFaceOn && !isDTL) {
     const handWeight = 0.7
-    if (handDistance >= CLUB_DETECTION.HAND_DISTANCE.DRIVER_MIN) {
+    if (signals.handDistance >= CLUB_DETECTION.HAND_DISTANCE.DRIVER_MIN) {
       driverScore += handWeight
       signalCount += handWeight
-    } else if (handDistance <= CLUB_DETECTION.HAND_DISTANCE.IRON_MAX) {
+    } else if (signals.handDistance <= CLUB_DETECTION.HAND_DISTANCE.IRON_MAX) {
       driverScore -= handWeight
       signalCount += handWeight
     } else {
@@ -824,7 +826,7 @@ export function detectClubType(landmarks: Landmark[], cameraAngle: CameraAngle):
   // Spine angle signal - only reliable for DTL (face-on shows lateral tilt)
   // Single threshold at 45° - no ambiguous zone
   if (!isFaceOn) {
-    if (spineAngle <= CLUB_DETECTION.SPINE_ANGLE.THRESHOLD) {
+    if (signals.spineAngle <= CLUB_DETECTION.SPINE_ANGLE.THRESHOLD) {
       driverScore += 1
       signalCount++
     } else {
@@ -833,23 +835,38 @@ export function detectClubType(landmarks: Landmark[], cameraAngle: CameraAngle):
     }
   }
 
+  // Arm extension signal - reliable for face-on and oblique (uses Y-axis)
+  // Higher extension = more bent over = iron
+  // For face-on, this is the primary signal - use higher weight
+  if (!isDTL) {
+    const armWeight = isFaceOn ? 1.2 : 0.8
+    if (signals.armExtension <= CLUB_DETECTION.ARM_EXTENSION.DRIVER_MAX) {
+      driverScore += armWeight
+      signalCount += armWeight
+    } else if (signals.armExtension >= CLUB_DETECTION.ARM_EXTENSION.IRON_MIN) {
+      driverScore -= armWeight
+      signalCount += armWeight
+    } else {
+      signalCount += armWeight * 0.5
+    }
+  }
+
   // Knee flex signal - only reliable for DTL and oblique
   // Face-on: knee flex happens in Z-axis (toward/away from camera), not visible
   // More flex (lower angle) = iron
   if (!isFaceOn) {
     const kneeWeight = 0.6
-    if (kneeFlexAngle >= CLUB_DETECTION.KNEE_FLEX.DRIVER_MIN) {
+    if (signals.kneeFlexAngle >= CLUB_DETECTION.KNEE_FLEX.DRIVER_MIN) {
       driverScore += kneeWeight
       signalCount += kneeWeight
-    } else if (kneeFlexAngle <= CLUB_DETECTION.KNEE_FLEX.IRON_MAX) {
+    } else if (signals.kneeFlexAngle <= CLUB_DETECTION.KNEE_FLEX.IRON_MAX) {
       driverScore -= kneeWeight
       signalCount += kneeWeight
     } else {
-      signalCount += kneeWeight * 0.5 // Ambiguous zone
+      signalCount += kneeWeight * 0.5
     }
   }
 
-  // Calculate confidence based on signal agreement
   const normalizedScore = signalCount > 0 ? driverScore / signalCount : 0
   const confidence = Math.abs(normalizedScore)
 
@@ -862,22 +879,14 @@ export function detectClubType(landmarks: Landmark[], cameraAngle: CameraAngle):
     clubType = 'iron'
   }
 
-  return {
-    clubType,
-    confidence,
-    signals: {
-      stanceRatio,
-      handDistance,
-      spineAngle,
-      armExtension,
-      kneeFlexAngle,
-    },
-  }
+  return { clubType, confidence }
 }
 
 /**
  * Detect club type from multiple frames for more stable detection
- * Samples early frames (address position)
+ * Samples early frames (address position) and averages signal values
+ * Uses stance width, hand position, spine angle, arm extension, and knee flex as signals
+ * Camera angle determines which signals are reliable
  */
 export function detectClubTypeFromFrames(
   framesLandmarks: Landmark[][],
@@ -899,19 +908,17 @@ export function detectClubTypeFromFrames(
   let totalArmExtension = 0
   let totalKneeFlexAngle = 0
 
-  // Accumulate signals from all sampled frames regardless of individual confidence
-  // Individual frame confidence can be 0 when signals are in the ambiguous zone,
-  // but the signal values are still valid and should be averaged
+  // Accumulate signals from all sampled frames
   for (let i = 0; i < sampleCount; i++) {
-    const result = detectClubType(framesLandmarks[i], cameraAngle)
-    totalStanceRatio += result.signals.stanceRatio
-    totalHandDistance += result.signals.handDistance
-    totalSpineAngle += result.signals.spineAngle
-    totalArmExtension += result.signals.armExtension
-    totalKneeFlexAngle += result.signals.kneeFlexAngle
+    const landmarks = framesLandmarks[i]
+    totalStanceRatio += calculateStanceRatio(landmarks)
+    totalHandDistance += calculateHandDistance(landmarks)
+    totalSpineAngle += calculateAbsSpineAngle(landmarks)
+    totalArmExtension += calculateArmExtensionRatio(landmarks)
+    totalKneeFlexAngle += calculateKneeFlexAngle(landmarks)
   }
 
-  const avgSignals = {
+  const avgSignals: ClubTypeSignals = {
     stanceRatio: totalStanceRatio / sampleCount,
     handDistance: totalHandDistance / sampleCount,
     spineAngle: totalSpineAngle / sampleCount,
@@ -919,99 +926,8 @@ export function detectClubTypeFromFrames(
     kneeFlexAngle: totalKneeFlexAngle / sampleCount,
   }
 
-  // Re-run detection logic with averaged values
-  let driverScore = 0
-  let signalCount = 0
-
-  const isFaceOn = cameraAngle === 'face-on'
-  const isDTL = cameraAngle === 'dtl'
-
-  // Stance ratio signal - only reliable for face-on and oblique
-  // For face-on, use lower weight since pro golfers have varying stance widths
-  if (!isDTL) {
-    const stanceWeight = isFaceOn ? 0.3 : 1.0
-    if (avgSignals.stanceRatio >= CLUB_DETECTION.STANCE_RATIO.DRIVER_MIN) {
-      driverScore += stanceWeight
-      signalCount += stanceWeight
-    } else if (avgSignals.stanceRatio <= CLUB_DETECTION.STANCE_RATIO.IRON_MAX) {
-      driverScore -= stanceWeight
-      signalCount += stanceWeight
-    } else {
-      signalCount += stanceWeight * 0.5
-    }
-  }
-
-  // Hand distance signal - only reliable for oblique views
-  // Face-on: can't see depth (Z-axis)
-  // DTL: shoulder width normalization is broken (shoulders stacked in X)
-  if (!isFaceOn && !isDTL) {
-    const handWeight = 0.7
-    if (avgSignals.handDistance >= CLUB_DETECTION.HAND_DISTANCE.DRIVER_MIN) {
-      driverScore += handWeight
-      signalCount += handWeight
-    } else if (avgSignals.handDistance <= CLUB_DETECTION.HAND_DISTANCE.IRON_MAX) {
-      driverScore -= handWeight
-      signalCount += handWeight
-    } else {
-      signalCount += handWeight * 0.5
-    }
-  }
-
-  // Spine angle signal - only reliable for DTL
-  // Single threshold at 45° - no ambiguous zone
-  if (!isFaceOn) {
-    if (avgSignals.spineAngle <= CLUB_DETECTION.SPINE_ANGLE.THRESHOLD) {
-      driverScore += 1
-      signalCount++
-    } else {
-      driverScore -= 1
-      signalCount++
-    }
-  }
-
-  // Arm extension signal - reliable for face-on and oblique (uses Y-axis)
-  // Higher extension = more bent over = iron
-  // For face-on, this is the primary signal - use higher weight
-  if (!isDTL) {
-    const armWeight = isFaceOn ? 1.2 : 0.8
-    if (avgSignals.armExtension <= CLUB_DETECTION.ARM_EXTENSION.DRIVER_MAX) {
-      driverScore += armWeight
-      signalCount += armWeight
-    } else if (avgSignals.armExtension >= CLUB_DETECTION.ARM_EXTENSION.IRON_MIN) {
-      driverScore -= armWeight
-      signalCount += armWeight
-    } else {
-      signalCount += armWeight * 0.5
-    }
-  }
-
-  // Knee flex signal - only reliable for DTL and oblique
-  // Face-on: knee flex happens in Z-axis (toward/away from camera), not visible
-  // More flex (lower angle) = iron
-  if (!isFaceOn) {
-    const kneeWeight = 0.6
-    if (avgSignals.kneeFlexAngle >= CLUB_DETECTION.KNEE_FLEX.DRIVER_MIN) {
-      driverScore += kneeWeight
-      signalCount += kneeWeight
-    } else if (avgSignals.kneeFlexAngle <= CLUB_DETECTION.KNEE_FLEX.IRON_MAX) {
-      driverScore -= kneeWeight
-      signalCount += kneeWeight
-    } else {
-      signalCount += kneeWeight * 0.5
-    }
-  }
-
-  const normalizedScore = signalCount > 0 ? driverScore / signalCount : 0
-  const confidence = Math.abs(normalizedScore)
-
-  let clubType: ClubType
-  if (confidence < CLUB_DETECTION.MIN_CONFIDENCE) {
-    clubType = 'unknown'
-  } else if (normalizedScore > 0) {
-    clubType = 'driver'
-  } else {
-    clubType = 'iron'
-  }
+  // Use shared helper for threshold logic
+  const { clubType, confidence } = determineClubTypeFromSignals(avgSignals, cameraAngle)
 
   return {
     clubType,
