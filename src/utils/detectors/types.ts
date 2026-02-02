@@ -50,7 +50,6 @@ export function getCategoryFromMistakeId(mistakeId: SwingMistakeId): SwingMistak
     INCORRECT_GRIP: 'setup',
     STANCE_WIDTH_ISSUE: 'setup',
     // Backswing
-    SWAYING: 'backswing',
     REVERSE_PIVOT: 'backswing',
     INSUFFICIENT_SHOULDER_TURN: 'backswing',
     OVER_ROTATION: 'backswing',

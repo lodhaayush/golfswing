@@ -6,7 +6,6 @@ import { detectPoorPosture } from './setup/poorPosture'
 import { detectStanceWidthIssue } from './setup/stanceWidthIssue'
 
 // Backswing detectors
-import { detectSwaying } from './backswing/swaying'
 import { detectReversePivot } from './backswing/reversePivot'
 import { detectInsufficientShoulderTurn } from './backswing/insufficientShoulderTurn'
 import { detectOverRotation } from './backswing/overRotation'
@@ -39,8 +38,7 @@ const ALL_DETECTORS = [
   // Setup (2)
   detectPoorPosture,
   detectStanceWidthIssue,
-  // Backswing (6)
-  detectSwaying,
+  // Backswing (5)
   detectReversePivot,
   detectInsufficientShoulderTurn,
   detectOverRotation,

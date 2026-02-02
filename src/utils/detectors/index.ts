@@ -24,7 +24,6 @@ export { detectPoorPosture } from './setup/poorPosture'
 export { detectStanceWidthIssue } from './setup/stanceWidthIssue'
 
 // Backswing detectors
-export { detectSwaying } from './backswing/swaying'
 export { detectReversePivot } from './backswing/reversePivot'
 export { detectInsufficientShoulderTurn } from './backswing/insufficientShoulderTurn'
 export { detectOverRotation } from './backswing/overRotation'

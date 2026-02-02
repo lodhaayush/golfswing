@@ -15,7 +15,6 @@ export type SwingMistakeId =
   | 'INCORRECT_GRIP'
   | 'STANCE_WIDTH_ISSUE'
   // Backswing Faults
-  | 'SWAYING'
   | 'REVERSE_PIVOT'
   | 'INSUFFICIENT_SHOULDER_TURN'
   | 'OVER_ROTATION'

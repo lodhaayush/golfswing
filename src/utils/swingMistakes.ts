@@ -62,15 +62,6 @@ export const COMMON_SWING_MISTAKES: readonly SwingMistake[] = [
   // Category 2: Backswing Faults
   // ============================================
   {
-    id: 'SWAYING',
-    category: 'backswing',
-    name: 'Swaying',
-    description:
-      'Lateral hip/body movement away from target instead of rotation',
-    detectableViaPose: true,
-    severity: 'major',
-  },
-  {
     id: 'REVERSE_PIVOT',
     category: 'backswing',
     name: 'Reverse pivot',
