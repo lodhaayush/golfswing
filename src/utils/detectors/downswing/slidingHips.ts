@@ -82,8 +82,8 @@ export const detectSlidingHips: MistakeDetector = (input: DetectorInput): Detect
   const backswingSwayPct = (maxBackswingSway / stanceWidth) * 100
 
   // Backswing thresholds (should be minimal movement)
-  const BACKSWING_SWAY_THRESHOLD = 10  // Allow up to 10% deviation
-  const BACKSWING_SEVERE_THRESHOLD = 20
+  const BACKSWING_SWAY_THRESHOLD = 15  // Allow up to 15% deviation
+  const BACKSWING_SEVERE_THRESHOLD = 25
 
   // ========== DOWNSWING CHECK ==========
   // At impact, lead hip shouldn't go past lead ankle

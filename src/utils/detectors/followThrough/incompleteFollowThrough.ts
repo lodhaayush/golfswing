@@ -1,6 +1,7 @@
 import type { DetectorInput, DetectorResult, MistakeDetector } from '../types'
 import { createNotDetectedResult, getPhaseFrameIndices } from '../types'
 import { calculateRotationFromWidth } from '@/utils/angleCalculations'
+import { logger } from '@/utils/debugLogger'
 
 /**
  * INCOMPLETE_FOLLOW_THROUGH detector
@@ -73,6 +74,18 @@ export const detectIncompleteFollowThrough: MistakeDetector = (input: DetectorIn
   // Check if follow-through continues after impact
   const hasRotationIncrease = rotationIncrease >= MIN_INCREASE
   const reachesFullFinish = maxPostImpactRotation >= IDEAL_FINISH_ROTATION
+
+  logger.info('INCOMPLETE_FOLLOW_THROUGH Debug:', {
+    impactIdx,
+    searchEnd,
+    impactShoulderRotation: impactShoulderRotation.toFixed(1),
+    maxPostImpactRotation: maxPostImpactRotation.toFixed(1),
+    rotationIncrease: rotationIncrease.toFixed(1),
+    hasRotationIncrease,
+    reachesFullFinish,
+    MIN_INCREASE,
+    IDEAL_FINISH_ROTATION,
+  })
 
   if (hasRotationIncrease && reachesFullFinish) {
     return {

@@ -185,6 +185,9 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
   const isRightHanded = detectHandedness(frames)
   const leadHand = isRightHanded ? 'left' : 'right'
 
+  // Detect slow-motion videos early for scaling thresholds
+  const isSlowMotion = frames.length > SLOW_MOTION.FRAME_COUNT_THRESHOLD
+
   const phaseFrames: PhaseFrame[] = []
   const handHeights: number[] = []
   const velocities: number[] = []
@@ -222,14 +225,20 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
     })
   }
 
-  // Apply smoothing to reduce noise
-  const smoothedVelocities = smoothArray(velocities, PHASE_DETECTION.SMOOTHING_WINDOW)
-  const smoothedHandHeights = smoothArray(handHeights, PHASE_DETECTION.SMOOTHING_WINDOW)
+  // Apply smoothing to reduce noise - scale window for slow-motion videos
+  const smoothingWindow = isSlowMotion
+    ? Math.round(PHASE_DETECTION.SMOOTHING_WINDOW * SLOW_MOTION.SMOOTHING_WINDOW_SCALE)
+    : PHASE_DETECTION.SMOOTHING_WINDOW
+  const smoothedVelocities = smoothArray(velocities, smoothingWindow)
+  const smoothedHandHeights = smoothArray(handHeights, smoothingWindow)
 
   // Step 1: Find impact frame using smoothed velocities
   // Use robust peak detection to find the most stable velocity peak
-  const impactSearchStart = Math.floor(frames.length * PHASE_DETECTION.IMPACT_SEARCH.START_FRACTION)
-  const impactSearchEnd = Math.floor(frames.length * PHASE_DETECTION.IMPACT_SEARCH.END_FRACTION)
+  // For slow-motion videos, adjust search range since swing often occurs earlier proportionally
+  const impactSearchStartFraction = isSlowMotion ? 0.15 : PHASE_DETECTION.IMPACT_SEARCH.START_FRACTION
+  const impactSearchEndFraction = isSlowMotion ? 0.75 : PHASE_DETECTION.IMPACT_SEARCH.END_FRACTION
+  const impactSearchStart = Math.floor(frames.length * impactSearchStartFraction)
+  const impactSearchEnd = Math.floor(frames.length * impactSearchEndFraction)
 
   let impactIdx = findRobustPeakIndex(smoothedVelocities, impactSearchStart, impactSearchEnd, PHASE_DETECTION.MIN_PEAK_WIDTH)
 
@@ -267,13 +276,11 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
     }
   }
 
-  // Detect slow-motion videos for scaling thresholds
-  const isSlowMotion = frames.length > SLOW_MOTION.FRAME_COUNT_THRESHOLD
-
   // Alternative: if hands reach their lowest point (highest Y) near the velocity peak,
   // that's a strong indicator of impact. Use wider window for slow-motion videos.
+  // In slow-motion, velocity peak can occur 20+ frames after actual impact
   const handHeightBackwardOffset = isSlowMotion
-    ? Math.round(5 * SLOW_MOTION.SEARCH_WINDOW_SCALE)  // 15 frames for slow-mo
+    ? Math.round(8 * SLOW_MOTION.SEARCH_WINDOW_SCALE)  // 24 frames for slow-mo
     : 5  // 5 frames for normal speed
   const handHeightCheckStart = Math.max(0, impactIdx - handHeightBackwardOffset)
   const handHeightCheckEnd = Math.min(frames.length, impactIdx + PHASE_DETECTION.HAND_HEIGHT_SEARCH_FRAMES)
@@ -308,8 +315,9 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
   const distanceFromPeak = maxHandYIdx - velocityPeakIdx
 
   // Scale threshold for slow-motion videos (more frames = larger absolute differences)
+  // Must match handHeightBackwardOffset to accept impacts found in that range
   const handHeightBeforePeakThreshold = isSlowMotion
-    ? Math.round(5 * SLOW_MOTION.SEARCH_WINDOW_SCALE)  // 15 frames for slow-mo
+    ? Math.round(8 * SLOW_MOTION.SEARCH_WINDOW_SCALE)  // 24 frames for slow-mo
     : 5  // 5 frames for normal speed
 
   if (distanceFromPeak < 0 && distanceFromPeak >= -handHeightBeforePeakThreshold) {
@@ -369,17 +377,27 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
   let addressEndIdx = 0
 
   // Calculate baseline velocity from first few frames (should be low during address)
-  const baselineFrames = Math.min(5, Math.floor(frames.length * PHASE_DETECTION.TOP_SEARCH_START_FRACTION))
+  // Use fewer baseline frames for slow-motion to avoid including early movement
+  const baselineFrameCount = isSlowMotion
+    ? SLOW_MOTION.ADDRESS_BASELINE_FRAMES
+    : Math.min(5, Math.floor(frames.length * PHASE_DETECTION.TOP_SEARCH_START_FRACTION))
   let baselineVelocity = 0
-  for (let i = 0; i < baselineFrames; i++) {
+  for (let i = 0; i < baselineFrameCount; i++) {
     baselineVelocity += smoothedVelocities[i]
   }
-  baselineVelocity = baselineVelocity / baselineFrames
+  baselineVelocity = baselineVelocity / baselineFrameCount
 
   // Use multiple signals to find when swing actually starts
+  // Use more sensitive thresholds for slow-motion videos
+  const velocityMultiplier = isSlowMotion
+    ? SLOW_MOTION.ADDRESS_VELOCITY_MULTIPLIER
+    : PHASE_DETECTION.ADDRESS_DETECTION.VELOCITY_MULTIPLIER
+  const peakVelocityFraction = isSlowMotion
+    ? SLOW_MOTION.ADDRESS_PEAK_VELOCITY_FRACTION
+    : PHASE_DETECTION.ADDRESS_DETECTION.PEAK_VELOCITY_FRACTION
   const velocityThreshold = Math.max(
-    baselineVelocity * PHASE_DETECTION.ADDRESS_DETECTION.VELOCITY_MULTIPLIER,
-    smoothedVelocities[impactIdx] * PHASE_DETECTION.ADDRESS_DETECTION.PEAK_VELOCITY_FRACTION
+    baselineVelocity * velocityMultiplier,
+    smoothedVelocities[impactIdx] * peakVelocityFraction
   )
 
   // Look for sustained velocity increase (not just a single frame spike)
@@ -395,13 +413,17 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
   }
 
   // If no clear velocity increase found, use hand movement direction
+  // Use lower threshold for slow-motion videos (smaller movements visible)
+  const handMovementThreshold = isSlowMotion
+    ? SLOW_MOTION.ADDRESS_HAND_MOVEMENT_THRESHOLD
+    : PHASE_DETECTION.ADDRESS_DETECTION.HAND_MOVEMENT_THRESHOLD
   if (addressEndIdx < 3) {
     const initialHandX = handXPositions[0]
 
     for (let i = 3; i < addressSearchEnd; i++) {
       const handDelta = Math.abs(smoothedHandHeights[i] - smoothedHandHeights[0]) +
                         Math.abs(handXPositions[i] - initialHandX)
-      if (handDelta > PHASE_DETECTION.ADDRESS_DETECTION.HAND_MOVEMENT_THRESHOLD) {
+      if (handDelta > handMovementThreshold) {
         addressEndIdx = Math.max(0, i - 2)
         break
       }
@@ -425,6 +447,8 @@ export function detectSwingPhases(frames: PoseFrame[]): SwingPhaseResult {
     impactTime: frames[impactIdx]?.timestamp.toFixed(2),
     totalFrames: frames.length,
     fps: fps.toFixed(1),
+    isSlowMotion,
+    smoothingWindow,
   })
 
   const followThroughStartIdx = impactIdx + 2
