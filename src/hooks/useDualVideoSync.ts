@@ -95,7 +95,14 @@ function getCurrentPhase(time: number, phases: PhaseSegment[]): SwingPhase | nul
   if (phases.length === 0) return null
 
   // First try exact match
-  const exactMatch = phases.find((p) => time >= p.startTime && time <= p.endTime)
+  // Use exclusive end boundary (time < endTime) to handle phase boundaries correctly
+  // At boundaries, prefer the phase that starts at that time over the one that ends there
+  // Exception: for the last phase, include the end time
+  const lastPhase = phases[phases.length - 1]
+  const exactMatch = phases.find((p) => {
+    const isLastPhase = p === lastPhase
+    return time >= p.startTime && (isLastPhase ? time <= p.endTime : time < p.endTime)
+  })
   if (exactMatch) {
     return exactMatch.phase
   }
@@ -126,7 +133,7 @@ export function useDualVideoSync({
   proPhases,
 }: UseDualVideoSyncOptions): UseDualVideoSyncReturn {
   const [isPlaying, setIsPlaying] = useState(false)
-  const [playbackSpeed, setPlaybackSpeedState] = useState(0.25)
+  const [playbackSpeed, setPlaybackSpeedState] = useState(1.0)
   const [syncEnabled, setSyncEnabled] = useState(true)
   const [userCurrentTime, setUserCurrentTime] = useState(0)
   const [proCurrentTime, setProCurrentTime] = useState(0)
@@ -284,19 +291,25 @@ export function useDualVideoSync({
       // Mark this as a manual seek to prevent immediate re-sync
       lastSeekTimeRef.current = Date.now()
 
+      // Small offset to ensure we land inside the phase, not at the exact boundary
+      // Video seeking is imprecise and may land slightly before the requested time
+      const SEEK_OFFSET = 0.02
+
       // Find phase in user video
       const userPhase = userPhases.find((p) => p.phase === phase)
       if (userPhase && userVideo) {
-        userVideo.currentTime = userPhase.startTime
+        const seekTime = userPhase.startTime + SEEK_OFFSET
+        userVideo.currentTime = seekTime
         // Update state immediately so UI reflects the change
-        setUserCurrentTime(userPhase.startTime)
+        setUserCurrentTime(seekTime)
       }
 
       // Find phase in pro video
       const proPhase = proPhases.find((p) => p.phase === phase)
       if (proPhase && proVideo) {
-        proVideo.currentTime = proPhase.startTime
-        setProCurrentTime(proPhase.startTime)
+        const seekTime = proPhase.startTime + SEEK_OFFSET
+        proVideo.currentTime = seekTime
+        setProCurrentTime(seekTime)
       }
     },
     [userVideoRef, proVideoRef, userPhases, proPhases]

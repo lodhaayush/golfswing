@@ -24,8 +24,6 @@ interface DualVideoPlayerProps {
   userScore?: number
 }
 
-const SPEED_OPTIONS = [0.125, 0.25, 0.5, 0.75, 1.0]
-
 export function DualVideoPlayer({
   userVideoUrl,
   userVideoRef: externalUserRef,
@@ -43,10 +41,8 @@ export function DualVideoPlayer({
   const {
     isPlaying,
     currentPhase,
-    playbackSpeed,
     syncEnabled,
     togglePlay,
-    setPlaybackSpeed,
     seekToPhase,
     seekUserVideo,
     setSyncEnabled,
@@ -248,22 +244,6 @@ export function DualVideoPlayer({
           >
             <ChevronRight className="w-5 h-5" />
           </button>
-
-          {/* Speed selector */}
-          <div className="flex items-center gap-2 ml-4">
-            <span className="text-sm text-gray-400">Speed:</span>
-            <select
-              value={playbackSpeed}
-              onChange={(e) => setPlaybackSpeed(parseFloat(e.target.value))}
-              className="px-2 py-1 bg-gray-700 text-white text-sm rounded border border-gray-600 focus:outline-none focus:border-green-500"
-            >
-              {SPEED_OPTIONS.map((speed) => (
-                <option key={speed} value={speed}>
-                  {speed}x
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
       </div>
     </div>
