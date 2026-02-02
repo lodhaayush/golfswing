@@ -179,10 +179,6 @@ function App() {
     setAppState('player')
   }, [cancelAnalysis])
 
-  const handleBackToPlayer = useCallback(() => {
-    setAppState('player')
-  }, [])
-
   const handleTimeUpdate = useCallback((time: number) => {
     setCurrentTime(time)
   }, [])
@@ -288,7 +284,6 @@ function App() {
 
             <SwingResults
               result={analysisResult}
-              onBackToPlayer={handleBackToPlayer}
               onUploadNew={handleUploadNew}
               onClubTypeChange={handleClubTypeChange}
               onCompare={handleCompare}

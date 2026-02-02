@@ -10,7 +10,6 @@ import type { SwingMistakeId } from '@/types/swingMistakes'
 
 interface SwingResultsProps {
   result: AnalysisResult
-  onBackToPlayer?: () => void
   onUploadNew?: () => void
   onClubTypeChange?: (clubType: ClubType) => void
   onCompare?: () => void
@@ -151,7 +150,7 @@ function getClubTypeLabel(clubType: ClubType): string {
   }
 }
 
-export function SwingResults({ result, onBackToPlayer, onUploadNew, onClubTypeChange, onCompare }: SwingResultsProps) {
+export function SwingResults({ result, onUploadNew, onClubTypeChange, onCompare }: SwingResultsProps) {
   const tempoEval = evaluateTempo(result.tempo)
   const isDTL = result.cameraAngle === 'dtl'
   const isFaceOn = result.cameraAngle === 'face-on'
@@ -484,14 +483,6 @@ export function SwingResults({ result, onBackToPlayer, onUploadNew, onClubTypeCh
 
       {/* Action Buttons */}
       <div className="flex items-center justify-center gap-4 pt-4">
-        {onBackToPlayer && (
-          <button
-            onClick={onBackToPlayer}
-            className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
-          >
-            Back to Player
-          </button>
-        )}
         {onCompare && (
           <button
             onClick={onCompare}
