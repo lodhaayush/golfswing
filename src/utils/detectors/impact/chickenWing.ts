@@ -296,11 +296,38 @@ function detectChickenWingFaceOn(
 
   const shoulderIdx = isRightHanded ? POSE_LANDMARKS.LEFT_SHOULDER : POSE_LANDMARKS.RIGHT_SHOULDER
 
-  // Sample frames around impact and early follow-through
+  // First, find the frame where lead wrist reaches maximum extension toward target
+  // For right-handed: target is at higher X, so find max wrist X
+  // For left-handed: target is at lower X, so find min wrist X
+  const searchStart = impactPhase.startFrame
+  const searchEnd = followThroughPhase
+    ? Math.min(followThroughPhase.startFrame + 10, frames.length - 1)
+    : Math.min(impactPhase.endFrame + 10, frames.length - 1)
+
+  let maxExtensionFrame = searchStart
+  let maxExtensionWristX = isRightHanded ? -Infinity : Infinity
+
+  for (let i = searchStart; i <= searchEnd && i < frames.length; i++) {
+    const landmarks = frames[i]?.landmarks
+    if (!landmarks) continue
+
+    const wrist = landmarks[wristIdx]
+    if (!wrist) continue
+
+    const isMoreExtended = isRightHanded
+      ? wrist.x > maxExtensionWristX
+      : wrist.x < maxExtensionWristX
+
+    if (isMoreExtended) {
+      maxExtensionWristX = wrist.x
+      maxExtensionFrame = i
+    }
+  }
+
+  // Sample from impact start to max extension frame
+  // Chicken wing = elbow bent before hands reach max extension
   const sampleStart = impactPhase.startFrame
-  const sampleEnd = followThroughPhase
-    ? Math.min(followThroughPhase.startFrame + 5, frames.length - 1)
-    : Math.min(impactPhase.endFrame + 5, frames.length - 1)
+  const sampleEnd = maxExtensionFrame
 
   let minElbowAngle = 180
   let chickenWingFrames: number[] = []
@@ -343,6 +370,7 @@ function detectChickenWingFaceOn(
     severeThreshold: SEVERE_THRESHOLD + '°',
     chickenWingFramesCount: chickenWingFrames.length,
     sampleRange: `${sampleStart}-${sampleEnd}`,
+    maxExtensionFrame,
     detected: minElbowAngle < CHICKEN_WING_THRESHOLD,
   })
 

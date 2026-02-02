@@ -299,44 +299,56 @@ export function calculateImpactExtension(
     (handsCenterY - leadShoulder.y) ** 2
   )
 
-  // Calculate reach for post-impact frames and take median
+  // Find the frame with maximum wrist extension toward target
+  // For right-handed: target is at higher X, so find max wrist X
+  // For left-handed: target is at lower X, so find min wrist X
   if (postImpactFrames.length > 0) {
-    const postImpactReaches: number[] = []
+    let maxExtensionReach = 0
+    let maxExtensionWristX = isRightHanded ? leadWrist.x : leadWrist.x
+    let maxExtensionFrameIdx = -1
 
-    for (const landmarks of postImpactFrames) {
+    for (let i = 0; i < postImpactFrames.length; i++) {
+      const landmarks = postImpactFrames[i]
       const ftLeadShoulder = landmarks[leadShoulderIdx]
       const ftLeadWrist = landmarks[leadWristIdx]
       const ftTrailWrist = landmarks[trailWristIdx]
 
       if (ftLeadShoulder && ftLeadWrist && ftTrailWrist) {
-        const ftHandsCenterX = (ftLeadWrist.x + ftTrailWrist.x) / 2
-        const ftHandsCenterY = (ftLeadWrist.y + ftTrailWrist.y) / 2
+        // Check if this frame has more extension toward target
+        const isMoreExtended = isRightHanded
+          ? ftLeadWrist.x > maxExtensionWristX
+          : ftLeadWrist.x < maxExtensionWristX
 
-        const ftReach = Math.sqrt(
-          (ftHandsCenterX - ftLeadShoulder.x) ** 2 +
-          (ftHandsCenterY - ftLeadShoulder.y) ** 2
-        )
-        postImpactReaches.push(ftReach)
+        if (isMoreExtended || maxExtensionFrameIdx === -1) {
+          maxExtensionWristX = ftLeadWrist.x
+          maxExtensionFrameIdx = i
+
+          const ftHandsCenterX = (ftLeadWrist.x + ftTrailWrist.x) / 2
+          const ftHandsCenterY = (ftLeadWrist.y + ftTrailWrist.y) / 2
+
+          maxExtensionReach = Math.sqrt(
+            (ftHandsCenterX - ftLeadShoulder.x) ** 2 +
+            (ftHandsCenterY - ftLeadShoulder.y) ** 2
+          )
+        }
       }
     }
 
-    if (postImpactReaches.length > 0 && impactReach > 0) {
-      // Take median of post-impact reaches
-      postImpactReaches.sort((a, b) => a - b)
-      const medianIdx = Math.floor(postImpactReaches.length / 2)
-      const medianReach = postImpactReaches.length % 2 === 0
-        ? (postImpactReaches[medianIdx - 1] + postImpactReaches[medianIdx]) / 2
-        : postImpactReaches[medianIdx]
-
-      const extensionRatio = medianReach / impactReach
-      const score = Math.min(1, Math.max(0, extensionRatio - 0.5) * 2)
+    if (maxExtensionReach > 0 && impactReach > 0) {
+      // Good extension = reach at max extension point >= reach at impact
+      const extensionRatio = maxExtensionReach / impactReach
+      // Use ratio directly, capped at 1.0 (no bonus for over-extension)
+      const score = Math.min(1, extensionRatio)
 
       logger.info('Impact Extension Debug:', {
         impactReach: impactReach.toFixed(3),
-        medianPostImpactReach: medianReach.toFixed(3),
+        impactWristX: leadWrist.x.toFixed(3),
+        maxExtensionReach: maxExtensionReach.toFixed(3),
+        maxExtensionWristX: maxExtensionWristX.toFixed(3),
+        maxExtensionFrameIdx,
         extensionRatio: extensionRatio.toFixed(2),
         score: score.toFixed(2),
-        sampledFrames: postImpactReaches.length,
+        sampledFrames: postImpactFrames.length,
       })
 
       return score
