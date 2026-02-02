@@ -1,10 +1,12 @@
-import { Clock, RotateCw, User, Zap, Camera, Target, Edit2, AlertTriangle, CheckCircle, Check } from 'lucide-react'
+import { Clock, RotateCw, User, Zap, Camera, Target, Edit2, AlertTriangle, CheckCircle, Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import type { AnalysisResult, ClubType } from '@/types/analysis'
 import type { CameraAngle } from '@/utils/angleCalculations'
 import { formatTempoRatio, formatDuration, evaluateTempo } from '@/utils/tempoAnalysis'
 import type { DetectorResult } from '@/utils/detectors/types'
 import { getCategoryFromMistakeId } from '@/utils/detectors/types'
+import { getMistakeById } from '@/utils/swingMistakes'
+import type { SwingMistakeId } from '@/types/swingMistakes'
 
 interface SwingResultsProps {
   result: AnalysisResult
@@ -60,6 +62,34 @@ function formatMistakeId(id: string): string {
     .map(word => word.charAt(0) + word.slice(1).toLowerCase())
     .join(' ')
 }
+
+// All 18 active detectors that run on each swing analysis
+const ALL_ACTIVE_DETECTOR_IDS: SwingMistakeId[] = [
+  // Setup (2)
+  'POOR_POSTURE',
+  'STANCE_WIDTH_ISSUE',
+  // Backswing (5)
+  'REVERSE_PIVOT',
+  'INSUFFICIENT_SHOULDER_TURN',
+  'OVER_ROTATION',
+  'BENT_LEAD_ARM',
+  'LIFTING_HEAD',
+  // Downswing (4)
+  'EARLY_EXTENSION',
+  'HANGING_BACK',
+  'LOSS_OF_SPINE_ANGLE',
+  'SLIDING_HIPS',
+  // Impact (3)
+  'CHICKEN_WING',
+  'POOR_ARM_EXTENSION',
+  'HEAD_MOVEMENT',
+  // Follow-through (3)
+  'INCOMPLETE_FOLLOW_THROUGH',
+  'UNBALANCED_FINISH',
+  'REVERSE_C_FINISH',
+  // Tempo (1)
+  'POOR_TEMPO_RATIO',
+]
 
 function DetectedMistakeItem({ mistake }: { mistake: DetectorResult }) {
   const category = getCategoryFromMistakeId(mistake.mistakeId)
@@ -127,6 +157,18 @@ export function SwingResults({ result, onBackToPlayer, onUploadNew, onClubTypeCh
   const isFaceOn = result.cameraAngle === 'face-on'
   const [isEditingClub, setIsEditingClub] = useState(false)
   const [selectedClub, setSelectedClub] = useState<ClubType>(result.clubType)
+  const [showDetectedIssues, setShowDetectedIssues] = useState(true)
+  const [showNotDetected, setShowNotDetected] = useState(false)
+
+  // Calculate not-detected issues (areas looking good)
+  const detectedIds = new Set(result.detectedMistakes?.map(m => m.mistakeId) || [])
+  const notDetectedIssues = ALL_ACTIVE_DETECTOR_IDS
+    .filter(id => !detectedIds.has(id))
+    .map(id => {
+      const mistake = getMistakeById(id)
+      return mistake ? { id, name: mistake.name, category: mistake.category, description: mistake.description } : null
+    })
+    .filter((item): item is { id: SwingMistakeId; name: string; category: string; description: string } => item !== null)
 
   // Sync selectedClub when result changes (e.g., after re-analysis with override)
   useEffect(() => {
@@ -335,7 +377,7 @@ export function SwingResults({ result, onBackToPlayer, onUploadNew, onClubTypeCh
       </div>
 
       {/* Face-On Specific Metrics - only shown for face-on camera angle */}
-      {isFaceOn && (result.metrics.hipSway !== undefined || result.metrics.headStability !== undefined || result.metrics.impactExtension !== undefined) && (
+      {isFaceOn && (result.metrics.headStability !== undefined || result.metrics.impactExtension !== undefined) && (
         <div className="bg-gray-800 rounded-xl p-6">
           <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
             <Target className="w-5 h-5 text-cyan-400" />
@@ -343,13 +385,6 @@ export function SwingResults({ result, onBackToPlayer, onUploadNew, onClubTypeCh
             <span className="text-xs font-normal text-gray-500 ml-2">(face-on view analysis)</span>
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {result.metrics.hipSway !== undefined && (
-              <MetricCard
-                label="Hip Sway"
-                value={`${Math.round((1 - result.metrics.hipSway) * 100)}%`}
-                description="Higher = more stable"
-              />
-            )}
             {result.metrics.headStability !== undefined && (
               <MetricCard
                 label="Head Stability"
@@ -370,21 +405,33 @@ export function SwingResults({ result, onBackToPlayer, onUploadNew, onClubTypeCh
 
       {/* Detected Issues Section */}
       {result.detectedMistakes && result.detectedMistakes.length > 0 && (
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-yellow-400" />
-            Detected Issues
-            <span className="text-sm font-normal text-gray-500 ml-2">
-              ({result.detectedMistakes.length} found)
-            </span>
-          </h2>
-          <div className="space-y-3">
-            {result.detectedMistakes
-              .sort((a, b) => b.severity - a.severity)
-              .map((mistake, index) => (
-                <DetectedMistakeItem key={index} mistake={mistake} />
-              ))}
-          </div>
+        <div className="bg-gray-800 rounded-xl overflow-hidden">
+          <button
+            onClick={() => setShowDetectedIssues(!showDetectedIssues)}
+            className="w-full p-6 flex items-center justify-between hover:bg-gray-700/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-yellow-400" />
+              <span className="text-xl font-bold text-white">Detected Issues</span>
+              <span className="text-sm font-normal text-gray-500 ml-2">
+                ({result.detectedMistakes.length} found)
+              </span>
+            </div>
+            {showDetectedIssues ? (
+              <ChevronUp className="w-5 h-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+          {showDetectedIssues && (
+            <div className="px-6 pb-6 space-y-3">
+              {result.detectedMistakes
+                .sort((a, b) => b.severity - a.severity)
+                .map((mistake, index) => (
+                  <DetectedMistakeItem key={index} mistake={mistake} />
+                ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -398,6 +445,40 @@ export function SwingResults({ result, onBackToPlayer, onUploadNew, onClubTypeCh
           <p className="text-gray-400 text-sm mt-2">
             Your swing mechanics look solid. Keep practicing to maintain consistency.
           </p>
+        </div>
+      )}
+
+      {/* Areas Looking Good - Collapsed Section */}
+      {notDetectedIssues.length > 0 && (
+        <div className="bg-gray-800 rounded-xl overflow-hidden">
+          <button
+            onClick={() => setShowNotDetected(!showNotDetected)}
+            className="w-full p-6 flex items-center justify-between hover:bg-gray-700/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <span className="text-xl font-bold text-white">{notDetectedIssues.length} Areas Looking Good</span>
+            </div>
+            {showNotDetected ? (
+              <ChevronUp className="w-5 h-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+          {showNotDetected && (
+            <div className="px-6 pb-6 space-y-3">
+              {notDetectedIssues.map(item => (
+                <div key={item.id} className="p-4 rounded-lg border bg-green-900/30 border-green-800">
+                  <div className="flex items-center gap-2 mb-1">
+                    <CheckCircle className="w-4 h-4 text-green-400" />
+                    <span className="font-medium text-white">{item.name}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400 capitalize">{item.category}</span>
+                  </div>
+                  <p className="text-sm text-gray-300 mt-1">No issues detected</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
