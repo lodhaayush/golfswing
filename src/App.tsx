@@ -1,11 +1,14 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { del, keys } from 'idb-keyval'
+import { BookOpen } from 'lucide-react'
 import { VideoUploader } from '@/components/VideoUploader'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { AnalysisProgress } from '@/components/AnalysisProgress'
 import { SwingResults } from '@/components/SwingResults'
 import { SwingTimeline } from '@/components/SwingTimeline'
 import { ComparisonView } from '@/components/ComparisonView'
+import { LearningResources } from '@/components/LearningResources'
+import { MistakeDetail } from '@/components/MistakeDetail'
 import { useVideoStorage } from '@/hooks/useVideoStorage'
 import { useSwingAnalysis } from '@/hooks/useSwingAnalysis'
 import { useAutoAnalyze } from '@/hooks/useAutoAnalyze'
@@ -13,11 +16,14 @@ import { analyzeSwing, type AnalyzeSwingOptions } from '@/utils/swingAnalyzer'
 import { logger } from '@/utils/debugLogger'
 import type { VideoFile } from '@/types/video'
 import type { AnalysisResult, ClubType } from '@/types/analysis'
+import type { SwingMistakeId } from '@/types/swingMistakes'
 
-type AppState = 'upload' | 'player' | 'analyzing' | 'results' | 'comparison'
+type AppState = 'upload' | 'player' | 'analyzing' | 'results' | 'comparison' | 'learning' | 'mistakeDetail'
 
 function App() {
   const [appState, setAppState] = useState<AppState>('upload')
+  const [previousAppState, setPreviousAppState] = useState<AppState>('upload')
+  const [selectedMistakeId, setSelectedMistakeId] = useState<SwingMistakeId | null>(null)
   const [currentVideo, setCurrentVideo] = useState<VideoFile | null>(null)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null)
@@ -197,6 +203,23 @@ function App() {
     setAppState('results')
   }, [])
 
+  const handleGoToLearning = useCallback(() => {
+    if (appState !== 'learning') {
+      setPreviousAppState(appState)
+    }
+    setAppState('learning')
+  }, [appState])
+
+  const handleBackFromLearning = useCallback(() => {
+    setAppState(previousAppState)
+  }, [previousAppState])
+
+  const handleGoToMistakeDetail = useCallback((mistakeId: SwingMistakeId) => {
+    setPreviousAppState(appState)
+    setSelectedMistakeId(mistakeId)
+    setAppState('mistakeDetail')
+  }, [appState])
+
   const handleClubTypeChange = useCallback((newClubType: ClubType) => {
     if (!analysisResult || !currentVideo) return
 
@@ -228,9 +251,36 @@ function App() {
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
       <header className="border-b border-gray-700 bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-green-400">Golf Swing Coach</h1>
-          <p className="text-gray-400 text-sm">Analyze your swing with AI-powered pose detection</p>
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-green-400">Golf Swing Coach</h1>
+            <p className="text-gray-400 text-sm">Analyze your swing with AI-powered pose detection</p>
+          </div>
+          <nav className="flex items-center gap-2">
+            <button
+              onClick={appState === 'learning' || appState === 'mistakeDetail' ? handleBackFromLearning : undefined}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                appState !== 'learning' && appState !== 'mistakeDetail'
+                  ? 'bg-green-500/20 text-green-400'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-700'
+              }`}
+              disabled={appState === 'analyzing'}
+            >
+              Analyzer
+            </button>
+            <button
+              onClick={handleGoToLearning}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                appState === 'learning' || appState === 'mistakeDetail'
+                  ? 'bg-blue-500/20 text-blue-400'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-700'
+              }`}
+              disabled={appState === 'analyzing'}
+            >
+              <BookOpen className="w-4 h-4" />
+              Learn
+            </button>
+          </nav>
         </div>
       </header>
 
@@ -287,6 +337,7 @@ function App() {
               onUploadNew={handleUploadNew}
               onClubTypeChange={handleClubTypeChange}
               onCompare={handleCompare}
+              onMistakeSelect={handleGoToMistakeDetail}
             />
           </div>
         )}
@@ -296,6 +347,17 @@ function App() {
             userResult={analysisResult}
             userVideoUrl={videoUrl}
             onBack={handleBackToResults}
+          />
+        )}
+
+        {appState === 'learning' && (
+          <LearningResources onMistakeSelect={handleGoToMistakeDetail} />
+        )}
+
+        {appState === 'mistakeDetail' && selectedMistakeId && (
+          <MistakeDetail
+            mistakeId={selectedMistakeId}
+            onBack={handleBackFromLearning}
           />
         )}
       </main>

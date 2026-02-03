@@ -1,4 +1,4 @@
-import { Clock, RotateCw, User, Zap, Camera, Target, Edit2, AlertTriangle, CheckCircle, Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { Clock, RotateCw, User, Zap, Camera, Target, Edit2, AlertTriangle, CheckCircle, Check, ChevronDown, ChevronUp, ChevronRight } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import type { AnalysisResult, ClubType } from '@/types/analysis'
 import type { CameraAngle } from '@/utils/angleCalculations'
@@ -13,6 +13,7 @@ interface SwingResultsProps {
   onUploadNew?: () => void
   onClubTypeChange?: (clubType: ClubType) => void
   onCompare?: () => void
+  onMistakeSelect?: (mistakeId: SwingMistakeId) => void
 }
 
 function MetricCard({
@@ -90,18 +91,24 @@ const ALL_ACTIVE_DETECTOR_IDS: SwingMistakeId[] = [
   'POOR_TEMPO_RATIO',
 ]
 
-function DetectedMistakeItem({ mistake }: { mistake: DetectorResult }) {
+function DetectedMistakeItem({ mistake, onSelect }: { mistake: DetectorResult; onSelect?: (mistakeId: SwingMistakeId) => void }) {
   const category = getCategoryFromMistakeId(mistake.mistakeId)
 
   return (
-    <div className={`p-4 rounded-lg border ${getSeverityBgColor(mistake.severity)}`}>
-      <div className="flex items-center gap-2 mb-1">
-        <AlertTriangle className={`w-4 h-4 ${getSeverityColor(mistake.severity)}`} />
-        <span className="font-medium text-white">{formatMistakeId(mistake.mistakeId)}</span>
-        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400 capitalize">{category}</span>
+    <button
+      onClick={() => onSelect?.(mistake.mistakeId)}
+      className={`w-full text-left p-4 rounded-lg border ${getSeverityBgColor(mistake.severity)} hover:opacity-90 transition-opacity cursor-pointer`}
+    >
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className={`w-4 h-4 ${getSeverityColor(mistake.severity)}`} />
+          <span className="font-medium text-white">{formatMistakeId(mistake.mistakeId)}</span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400 capitalize">{category}</span>
+        </div>
+        <ChevronRight className="w-4 h-4 text-gray-500" />
       </div>
       <p className="text-sm text-gray-300 mt-1">{mistake.message}</p>
-    </div>
+    </button>
   )
 }
 
@@ -150,7 +157,7 @@ function getClubTypeLabel(clubType: ClubType): string {
   }
 }
 
-export function SwingResults({ result, onUploadNew, onClubTypeChange, onCompare }: SwingResultsProps) {
+export function SwingResults({ result, onUploadNew, onClubTypeChange, onCompare, onMistakeSelect }: SwingResultsProps) {
   const tempoEval = evaluateTempo(result.tempo)
   const isDTL = result.cameraAngle === 'dtl'
   const isFaceOn = result.cameraAngle === 'face-on'
@@ -427,7 +434,7 @@ export function SwingResults({ result, onUploadNew, onClubTypeChange, onCompare 
               {result.detectedMistakes
                 .sort((a, b) => b.severity - a.severity)
                 .map((mistake, index) => (
-                  <DetectedMistakeItem key={index} mistake={mistake} />
+                  <DetectedMistakeItem key={index} mistake={mistake} onSelect={onMistakeSelect} />
                 ))}
             </div>
           )}
