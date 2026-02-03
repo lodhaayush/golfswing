@@ -302,11 +302,15 @@ function App() {
               <ul className={`space-y-2 ${colors.text.muted}`}>
                 <li className="flex items-baseline gap-2">
                   <span className={colors.text.secondary}>1.</span>
-                  <span>Trim the video to just contain your swing</span>
+                  <span>Trim your video to show just the swing</span>
                 </li>
                 <li className="flex items-baseline gap-2">
                   <span className={colors.text.secondary}>2.</span>
-                  <span>Normal speed videos give more accurate results than slo-mo videos</span>
+                  <span>Use normal speed for best results — slow-motion can reduce accuracy</span>
+                </li>
+                <li className="flex items-baseline gap-2">
+                  <span className={colors.text.secondary}>3.</span>
+                  <span>Film from down the line or face-on, with your full body in frame</span>
                 </li>
               </ul>
             </div>
