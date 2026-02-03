@@ -2,6 +2,9 @@ import type { ProVideoReference } from '@/types/proVideo'
 import type { CameraAngle } from '@/utils/angleCalculations'
 import type { ClubType, SwingPhase } from '@/types/analysis'
 
+// Use Vite's base URL for proper path resolution in all environments
+const BASE_URL = import.meta.env.BASE_URL
+
 /**
  * Pre-analyzed pro swing videos bundled with the app.
  * Each video includes pre-extracted pose frames and phase segments.
@@ -15,7 +18,7 @@ export const PRO_VIDEOS: ProVideoReference[] = [
   {
     id: 'pro-faceon-driver',
     name: 'Tiger Woods Driver (Face-On)',
-    videoUrl: '/videos/pro-faceon-driver.mov',
+    videoUrl: `${BASE_URL}videos/pro-faceon-driver.mov`,
     cameraAngle: 'face-on',
     clubType: 'driver',
     isRightHanded: true,
@@ -33,7 +36,7 @@ export const PRO_VIDEOS: ProVideoReference[] = [
   {
     id: 'pro-faceon-iron',
     name: 'Rory McIlroy Iron (Face-On)',
-    videoUrl: '/videos/pro-faceon-iron.mov',
+    videoUrl: `${BASE_URL}videos/pro-faceon-iron.mov`,
     cameraAngle: 'face-on',
     clubType: 'iron',
     isRightHanded: true,
@@ -51,7 +54,7 @@ export const PRO_VIDEOS: ProVideoReference[] = [
   {
     id: 'pro-dtl-driver',
     name: 'Tiger Woods Driver (Down the Line)',
-    videoUrl: '/videos/pro-dtl-driver.mov',
+    videoUrl: `${BASE_URL}videos/pro-dtl-driver.mov`,
     cameraAngle: 'dtl',
     clubType: 'driver',
     isRightHanded: true,
@@ -69,7 +72,7 @@ export const PRO_VIDEOS: ProVideoReference[] = [
   {
     id: 'pro-dtl-iron',
     name: 'Justin Rose Iron (Down the Line)',
-    videoUrl: '/videos/pro-dtl-iron.mov',
+    videoUrl: `${BASE_URL}videos/pro-dtl-iron.mov`,
     cameraAngle: 'dtl',
     clubType: 'iron',
     isRightHanded: true,
