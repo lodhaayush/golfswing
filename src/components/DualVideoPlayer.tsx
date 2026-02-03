@@ -78,6 +78,10 @@ export function DualVideoPlayer({
     }
     if (proVideo) {
       proVideo.pause()
+      proVideo.currentTime = Math.max(
+        0,
+        Math.min(proVideo.currentTime + direction * frameTime, proDuration)
+      )
     }
   }
 
