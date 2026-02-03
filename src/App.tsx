@@ -213,12 +213,15 @@ function App() {
   }, [appState])
 
   const handleGoToAnalyze = useCallback(() => {
-    if (currentVideo && videoUrl) {
-      setAppState('player')
-    } else {
-      setAppState('upload')
+    // Clear existing video and go to upload
+    if (videoUrl) {
+      revokeVideoUrl(videoUrl)
     }
-  }, [currentVideo, videoUrl])
+    setVideoUrl(null)
+    setCurrentVideo(null)
+    setAnalysisResult(null)
+    setAppState('upload')
+  }, [videoUrl, revokeVideoUrl])
 
   const handleGoToResults = useCallback(() => {
     if (analysisResult) {
