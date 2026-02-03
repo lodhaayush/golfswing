@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { del, keys } from 'idb-keyval'
-import { BookOpen, Lightbulb } from 'lucide-react'
+import { BookOpen, Lightbulb, Upload, BarChart2 } from 'lucide-react'
 import { colors } from '@/styles/colors'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { VideoUploader } from '@/components/VideoUploader'
@@ -212,6 +212,20 @@ function App() {
     setAppState('learning')
   }, [appState])
 
+  const handleGoToAnalyze = useCallback(() => {
+    if (currentVideo && videoUrl) {
+      setAppState('player')
+    } else {
+      setAppState('upload')
+    }
+  }, [currentVideo, videoUrl])
+
+  const handleGoToResults = useCallback(() => {
+    if (analysisResult) {
+      setAppState('results')
+    }
+  }, [analysisResult])
+
   const handleBackFromLearning = useCallback(() => {
     setAppState(previousAppState)
   }, [previousAppState])
@@ -259,22 +273,42 @@ function App() {
             <p className={`${colors.text.secondary} text-sm`}>Analyze your swing with AI-powered pose detection</p>
           </div>
           <nav className="flex items-center gap-2">
+            {/* Analyze Tab */}
             <button
-              onClick={appState === 'learning' || appState === 'mistakeDetail' ? handleBackFromLearning : undefined}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                appState !== 'learning' && appState !== 'mistakeDetail'
+              onClick={handleGoToAnalyze}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                appState === 'upload' || appState === 'player' || appState === 'analyzing'
                   ? colors.primary.active
                   : `${colors.text.secondary} ${colors.text.hover} ${colors.bg.hover}`
               }`}
               disabled={appState === 'analyzing'}
             >
-              Analyzer
+              <Upload className="w-4 h-4" />
+              Analyze
             </button>
+
+            {/* Results Tab */}
+            <button
+              onClick={handleGoToResults}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                appState === 'results' || appState === 'comparison'
+                  ? colors.primary.active
+                  : !analysisResult
+                    ? `${colors.text.subtle} cursor-not-allowed`
+                    : `${colors.text.secondary} ${colors.text.hover} ${colors.bg.hover}`
+              }`}
+              disabled={appState === 'analyzing' || !analysisResult}
+            >
+              <BarChart2 className="w-4 h-4" />
+              Results
+            </button>
+
+            {/* Learn Tab */}
             <button
               onClick={handleGoToLearning}
               className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
                 appState === 'learning' || appState === 'mistakeDetail'
-                  ? colors.secondary.active
+                  ? colors.primary.active
                   : `${colors.text.secondary} ${colors.text.hover} ${colors.bg.hover}`
               }`}
               disabled={appState === 'analyzing'}
@@ -282,6 +316,7 @@ function App() {
               <BookOpen className="w-4 h-4" />
               Learn
             </button>
+
             <ThemeToggle />
           </nav>
         </div>
