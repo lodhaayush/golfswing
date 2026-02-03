@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { del, keys } from 'idb-keyval'
-import { BookOpen, Lightbulb, Upload, BarChart2 } from 'lucide-react'
+import { BookOpen, Lightbulb, Upload, BarChart2, MessageSquare } from 'lucide-react'
 import { colors } from '@/styles/colors'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { VideoUploader } from '@/components/VideoUploader'
@@ -11,6 +11,7 @@ import { SwingTimeline } from '@/components/SwingTimeline'
 import { ComparisonView } from '@/components/ComparisonView'
 import { LearningResources } from '@/components/LearningResources'
 import { MistakeDetail } from '@/components/MistakeDetail'
+import { FeedbackModal } from '@/components/FeedbackModal'
 import { useVideoStorage } from '@/hooks/useVideoStorage'
 import { useSwingAnalysis } from '@/hooks/useSwingAnalysis'
 import { useAutoAnalyze } from '@/hooks/useAutoAnalyze'
@@ -26,6 +27,7 @@ function App() {
   const [appState, setAppState] = useState<AppState>('upload')
   const [previousAppState, setPreviousAppState] = useState<AppState>('upload')
   const [selectedMistakeId, setSelectedMistakeId] = useState<SwingMistakeId | null>(null)
+  const [showFeedback, setShowFeedback] = useState(false)
   const [currentVideo, setCurrentVideo] = useState<VideoFile | null>(null)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null)
@@ -320,6 +322,16 @@ function App() {
               Learn
             </button>
 
+            {/* Feedback Button */}
+            <button
+              onClick={() => setShowFeedback(true)}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${colors.text.secondary} ${colors.text.hover} ${colors.bg.hover}`}
+              disabled={appState === 'analyzing'}
+            >
+              <MessageSquare className="w-4 h-4" />
+              Feedback
+            </button>
+
             <ThemeToggle />
           </nav>
         </div>
@@ -427,6 +439,11 @@ function App() {
           />
         )}
       </main>
+
+      {/* Feedback Modal */}
+      {showFeedback && (
+        <FeedbackModal onClose={() => setShowFeedback(false)} />
+      )}
     </div>
   )
 }
