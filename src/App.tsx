@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { del, keys } from 'idb-keyval'
-import { BookOpen } from 'lucide-react'
+import { BookOpen, Lightbulb } from 'lucide-react'
 import { VideoUploader } from '@/components/VideoUploader'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { AnalysisProgress } from '@/components/AnalysisProgress'
@@ -287,7 +287,27 @@ function App() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         {appState === 'upload' && (
-          <VideoUploader onVideoSelect={handleVideoSelect} />
+          <div className="space-y-8">
+            <VideoUploader onVideoSelect={handleVideoSelect} />
+
+            {/* Tips Section */}
+            <div className="max-w-xl mx-auto">
+              <div className="flex items-center gap-2 mb-3">
+                <Lightbulb className="w-5 h-5 text-gray-400" />
+                <h3 className="text-lg font-medium text-white">Tips for best results</h3>
+              </div>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-baseline gap-2">
+                  <span className="text-gray-400">1.</span>
+                  <span>Trim the video to just contain your swing</span>
+                </li>
+                <li className="flex items-baseline gap-2">
+                  <span className="text-gray-400">2.</span>
+                  <span>Normal speed videos give more accurate results than slo-mo videos</span>
+                </li>
+              </ul>
+            </div>
+          </div>
         )}
 
         {(appState === 'player' || appState === 'analyzing') && videoUrl && (
