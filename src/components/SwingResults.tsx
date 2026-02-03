@@ -474,14 +474,21 @@ export function SwingResults({ result, onUploadNew, onClubTypeChange, onCompare,
           {showNotDetected && (
             <div className="px-6 pb-6 space-y-3">
               {notDetectedIssues.map(item => (
-                <div key={item.id} className={`p-4 rounded-lg border ${colors.status.successBg}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle className={`w-4 h-4 ${colors.status.success}`} />
-                    <span className={`font-medium ${colors.text.primary}`}>{item.name}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${colors.bg.input} ${colors.text.secondary} capitalize`}>{item.category}</span>
+                <button
+                  key={item.id}
+                  onClick={() => onMistakeSelect?.(item.id)}
+                  className={`w-full text-left p-4 rounded-lg border ${colors.status.successBg} hover:opacity-90 transition-opacity cursor-pointer`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className={`w-4 h-4 ${colors.status.success}`} />
+                      <span className={`font-medium ${colors.text.primary}`}>{item.name}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${colors.bg.input} ${colors.text.secondary} capitalize`}>{item.category}</span>
+                    </div>
+                    <ChevronRight className={`w-4 h-4 ${colors.text.subtle}`} />
                   </div>
                   <p className={`text-sm ${colors.text.muted} mt-1`}>No issues detected</p>
-                </div>
+                </button>
               ))}
             </div>
           )}
