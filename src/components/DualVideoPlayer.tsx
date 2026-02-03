@@ -6,8 +6,6 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
-  Link2,
-  Link2Off,
 } from 'lucide-react'
 import type { PhaseSegment, SwingPhase } from '@/types/analysis'
 import { useDualVideoSync } from '@/hooks/useDualVideoSync'
@@ -42,11 +40,9 @@ export function DualVideoPlayer({
   const {
     isPlaying,
     currentPhase,
-    syncEnabled,
     togglePlay,
     seekToPhase,
     seekUserVideo,
-    setSyncEnabled,
     userCurrentTime,
     proCurrentTime,
     userDuration,
@@ -149,22 +145,8 @@ export function DualVideoPlayer({
 
       {/* Pro Video */}
       <div className={`${colors.bg.card} rounded-xl p-4`}>
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3">
           <h3 className={`text-lg font-semibold ${colors.text.primary}`}>{proLabel}</h3>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSyncEnabled(!syncEnabled)}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded text-sm transition-colors ${
-                syncEnabled
-                  ? colors.primary.active
-                  : `${colors.bg.input} ${colors.text.secondary}`
-              }`}
-              title={syncEnabled ? 'Sync enabled' : 'Sync disabled'}
-            >
-              {syncEnabled ? <Link2 className="w-4 h-4" /> : <Link2Off className="w-4 h-4" />}
-              <span className="hidden sm:inline">{syncEnabled ? 'Synced' : 'Not synced'}</span>
-            </button>
-          </div>
         </div>
 
         <div className={`relative ${colors.bg.video} rounded-lg overflow-hidden`}>
