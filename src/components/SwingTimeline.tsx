@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import { RefreshCw } from 'lucide-react'
 import type { PhaseSegment } from '@/types/analysis'
 import { getPhaseDisplayName, getPhaseColor } from '@/utils/phaseDetection'
 import { colors } from '@/styles/colors'
@@ -8,6 +9,7 @@ interface SwingTimelineProps {
   currentTime: number
   duration: number
   onSeek?: (time: number) => void
+  onRerunAnalysis?: () => void
 }
 
 export function SwingTimeline({
@@ -15,6 +17,7 @@ export function SwingTimeline({
   currentTime,
   duration,
   onSeek,
+  onRerunAnalysis,
 }: SwingTimelineProps) {
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -51,7 +54,19 @@ export function SwingTimeline({
 
   return (
     <div className={`w-full ${colors.bg.card} rounded-lg p-4 space-y-3`}>
-      <h3 className={`text-sm font-medium ${colors.text.secondary}`}>Swing Phases</h3>
+      <div className="flex items-center justify-between">
+        <h3 className={`text-sm font-medium ${colors.text.secondary}`}>Swing Phases</h3>
+        {onRerunAnalysis && (
+          <button
+            onClick={onRerunAnalysis}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs ${colors.text.muted} ${colors.bg.hover} transition-colors`}
+            title="Re-run analysis if phases look incorrect"
+          >
+            <RefreshCw className="w-3 h-3" />
+            <span>Re-run</span>
+          </button>
+        )}
+      </div>
 
       {/* Timeline bar */}
       <div

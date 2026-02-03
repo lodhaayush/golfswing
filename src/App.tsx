@@ -357,6 +357,7 @@ function App() {
               currentTime={currentTime}
               duration={videoDuration}
               onSeek={handleSeek}
+              onRerunAnalysis={handleAnalyze}
             />
 
             <SwingResults
