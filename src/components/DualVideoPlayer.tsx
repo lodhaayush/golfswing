@@ -163,7 +163,7 @@ export function DualVideoPlayer({
           />
         </div>
 
-        {/* Pro video progress (read-only when synced) */}
+        {/* Pro video progress */}
         <div className="flex items-center gap-3 mt-3">
           <span className={`text-sm ${colors.text.secondary} w-16 text-right font-mono`}>
             {formatTime(proCurrentTime)}

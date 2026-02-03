@@ -90,9 +90,6 @@ export function ComparisonView({
           <li>
             Use the frame-by-frame controls to examine positions in detail
           </li>
-          <li>
-            Both videos are synchronized by swing phase, so they stay aligned even if one swing is faster
-          </li>
         </ul>
       </div>
     </div>
