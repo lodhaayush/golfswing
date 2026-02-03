@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ArrowLeft } from 'lucide-react'
+import { colors } from '@/styles/colors'
 import type { AnalysisResult } from '@/types/analysis'
 import type { ProVideoReference } from '@/types/proVideo'
 import { getCompatibleProVideos } from '@/data/proVideos'
@@ -42,7 +43,7 @@ export function ComparisonView({
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-white transition-colors"
+          className={`flex items-center gap-2 px-4 py-2 ${colors.button.ghost} transition-colors`}
         >
           <ArrowLeft className="w-5 h-5" />
           <span>Back to Results</span>
@@ -68,11 +69,11 @@ export function ComparisonView({
           userScore={userResult.overallScore}
         />
       ) : (
-        <div className="bg-gray-800 rounded-xl p-8 text-center">
-          <p className="text-gray-400">
+        <div className={`${colors.bg.card} rounded-xl p-8 text-center`}>
+          <p className={colors.text.secondary}>
             No pro videos available for comparison.
           </p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className={`text-sm ${colors.text.subtle} mt-2`}>
             Pro videos for {userResult.cameraAngle === 'face-on' ? 'face-on' : 'down the line'} camera angle
             with {userResult.clubType} are not yet available.
           </p>
@@ -80,9 +81,9 @@ export function ComparisonView({
       )}
 
       {/* Tips Section */}
-      <div className="bg-gray-800/50 rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-gray-300 mb-2">Tips for Comparison</h3>
-        <ul className="text-sm text-gray-400 space-y-1">
+      <div className={`${colors.bg.cardMuted} rounded-xl p-4`}>
+        <h3 className={`text-sm font-semibold ${colors.text.muted} mb-2`}>Tips for Comparison</h3>
+        <ul className={`text-sm ${colors.text.secondary} space-y-1`}>
           <li>
             Use the phase icons to jump to specific swing positions (address, top, impact, etc.)
           </li>

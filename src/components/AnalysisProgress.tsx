@@ -1,5 +1,6 @@
 import { X, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import type { AnalysisPhase } from '@/hooks/useSwingAnalysis'
+import { colors } from '@/styles/colors'
 
 interface AnalysisProgressProps {
   phase: AnalysisPhase
@@ -17,20 +18,20 @@ export function AnalysisProgress({ phase, progress, message, onCancel }: Analysi
 
   return (
     <div className="w-full max-w-md mx-auto">
-      <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
+      <div className={`${colors.bg.card} rounded-xl p-6 shadow-lg`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             {isActive && (
-              <Loader2 className="w-5 h-5 text-green-400 animate-spin" />
+              <Loader2 className={`w-5 h-5 ${colors.status.success} animate-spin`} />
             )}
             {isComplete && (
-              <CheckCircle className="w-5 h-5 text-green-400" />
+              <CheckCircle className={`w-5 h-5 ${colors.status.success}`} />
             )}
             {isError && (
-              <AlertCircle className="w-5 h-5 text-red-400" />
+              <AlertCircle className={`w-5 h-5 ${colors.status.error}`} />
             )}
-            <h3 className="text-lg font-medium text-white">
+            <h3 className={`text-lg font-medium ${colors.text.primary}`}>
               {isComplete ? 'Analysis Complete' : isError ? 'Analysis Failed' : 'Analyzing Swing'}
             </h3>
           </div>
@@ -38,7 +39,7 @@ export function AnalysisProgress({ phase, progress, message, onCancel }: Analysi
           {isActive && onCancel && (
             <button
               onClick={onCancel}
-              className="p-1 text-gray-400 hover:text-white transition-colors"
+              className={`p-1 ${colors.text.secondary} ${colors.text.hover} transition-colors`}
               title="Cancel"
             >
               <X className="w-5 h-5" />
@@ -48,10 +49,10 @@ export function AnalysisProgress({ phase, progress, message, onCancel }: Analysi
 
         {/* Progress Bar */}
         <div className="mb-3 w-full">
-          <div className="relative w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div className={`relative w-full h-2 ${colors.progress.track} rounded-full overflow-hidden`}>
             <div
               className={`absolute top-0 left-0 h-full ${
-                isError ? 'bg-red-500' : 'bg-green-500'
+                isError ? colors.progress.error : colors.progress.fill
               }`}
               style={{
                 width: `${progressPercent}%`,
@@ -64,12 +65,12 @@ export function AnalysisProgress({ phase, progress, message, onCancel }: Analysi
         {/* Status Message */}
         <div className="flex items-center justify-end text-sm">
           {isError && (
-            <span className="text-red-400">
+            <span className={colors.status.error}>
               {message}
             </span>
           )}
           {isActive && (
-            <span className="text-green-400 font-medium">
+            <span className={`${colors.status.success} font-medium`}>
               {progressPercent}%
             </span>
           )}

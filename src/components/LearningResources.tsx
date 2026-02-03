@@ -2,6 +2,7 @@ import { ChevronRight } from 'lucide-react'
 import { DETECTOR_RESOURCES } from '@/utils/detectorResources'
 import { getMistakeById } from '@/utils/swingMistakes'
 import type { SwingMistakeId } from '@/types/swingMistakes'
+import { colors } from '@/styles/colors'
 
 interface LearningResourcesProps {
   onMistakeSelect: (mistakeId: SwingMistakeId) => void
@@ -29,13 +30,13 @@ function ResourceCard({
   return (
     <button
       onClick={() => onSelect(mistakeId)}
-      className="w-full flex items-center gap-3 p-4 rounded-lg bg-gray-700/50 hover:bg-gray-700 transition-colors text-left"
+      className={`w-full flex items-center gap-3 p-4 rounded-lg ${colors.bg.cardAlt} ${colors.bg.hoverAlt} transition-colors text-left`}
     >
       <div className="flex-1 min-w-0">
-        <div className="text-white font-medium">{mistake?.name || mistakeId}</div>
-        <div className="text-sm text-gray-400 capitalize">{mistake?.category}</div>
+        <div className={`${colors.text.primary} font-medium`}>{mistake?.name || mistakeId}</div>
+        <div className={`text-sm ${colors.text.secondary} capitalize`}>{mistake?.category}</div>
       </div>
-      <ChevronRight className="w-4 h-4 text-gray-500 flex-shrink-0" />
+      <ChevronRight className={`w-4 h-4 ${colors.text.subtle} flex-shrink-0`} />
     </button>
   )
 }
@@ -44,8 +45,8 @@ export function LearningResources({ onMistakeSelect }: LearningResourcesProps) {
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-white mb-2">Learning Resources</h2>
-        <p className="text-gray-400">Videos and articles to help fix common swing issues</p>
+        <h2 className={`text-3xl font-bold ${colors.text.primary} mb-2`}>Learning Resources</h2>
+        <p className={colors.text.secondary}>Videos and articles to help fix common swing issues</p>
       </div>
 
       {Object.entries(CATEGORIES).map(([key, category]) => {
@@ -56,8 +57,8 @@ export function LearningResources({ onMistakeSelect }: LearningResourcesProps) {
         if (resources.length === 0) return null
 
         return (
-          <div key={key} className="bg-gray-800 rounded-xl p-6">
-            <h3 className="text-xl font-bold text-white mb-4">{category.title}</h3>
+          <div key={key} className={`${colors.bg.card} rounded-xl p-6`}>
+            <h3 className={`text-xl font-bold ${colors.text.primary} mb-4`}>{category.title}</h3>
             <div className="grid gap-3">
               {resources.map(id => (
                 <ResourceCard key={id} mistakeId={id} onSelect={onMistakeSelect} />

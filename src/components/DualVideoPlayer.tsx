@@ -12,6 +12,7 @@ import {
 import type { PhaseSegment, SwingPhase } from '@/types/analysis'
 import { useDualVideoSync } from '@/hooks/useDualVideoSync'
 import { PhaseSelector } from './PhaseSelector'
+import { colors } from '@/styles/colors'
 
 interface DualVideoPlayerProps {
   userVideoUrl: string
@@ -98,19 +99,19 @@ export function DualVideoPlayer({
   return (
     <div className="w-full max-w-4xl mx-auto space-y-4">
       {/* User Video */}
-      <div className="bg-gray-800 rounded-xl p-4">
+      <div className={`${colors.bg.card} rounded-xl p-4`}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <h3 className="text-lg font-semibold text-white">{userLabel}</h3>
+            <h3 className={`text-lg font-semibold ${colors.text.primary}`}>{userLabel}</h3>
             {userScore !== undefined && (
-              <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-sm rounded-full font-medium">
+              <span className={`px-2 py-0.5 ${colors.primary.active} text-sm rounded-full font-medium`}>
                 Score: {userScore}
               </span>
             )}
           </div>
         </div>
 
-        <div className="relative bg-black rounded-lg overflow-hidden">
+        <div className={`relative ${colors.bg.video} rounded-lg overflow-hidden`}>
           <video
             ref={userVideoRef}
             src={userVideoUrl}
@@ -122,7 +123,7 @@ export function DualVideoPlayer({
 
         {/* User video seek bar */}
         <div className="flex items-center gap-3 mt-3">
-          <span className="text-sm text-gray-400 w-16 text-right font-mono">
+          <span className={`text-sm ${colors.text.secondary} w-16 text-right font-mono`}>
             {formatTime(userCurrentTime)}
           </span>
           <input
@@ -132,31 +133,31 @@ export function DualVideoPlayer({
             step={0.001}
             value={userCurrentTime}
             onChange={handleUserSeek}
-            className="flex-1 h-2 bg-gray-700 rounded-full appearance-none cursor-pointer
+            className={`flex-1 h-2 ${colors.bg.slider} rounded-full appearance-none cursor-pointer
               [&::-webkit-slider-thumb]:appearance-none
               [&::-webkit-slider-thumb]:w-4
               [&::-webkit-slider-thumb]:h-4
               [&::-webkit-slider-thumb]:bg-green-400
               [&::-webkit-slider-thumb]:rounded-full
-              [&::-webkit-slider-thumb]:cursor-pointer"
+              [&::-webkit-slider-thumb]:cursor-pointer`}
           />
-          <span className="text-sm text-gray-400 w-16 font-mono">
+          <span className={`text-sm ${colors.text.secondary} w-16 font-mono`}>
             {formatTime(userDuration)}
           </span>
         </div>
       </div>
 
       {/* Pro Video */}
-      <div className="bg-gray-800 rounded-xl p-4">
+      <div className={`${colors.bg.card} rounded-xl p-4`}>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-white">{proLabel}</h3>
+          <h3 className={`text-lg font-semibold ${colors.text.primary}`}>{proLabel}</h3>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSyncEnabled(!syncEnabled)}
               className={`flex items-center gap-1.5 px-2 py-1 rounded text-sm transition-colors ${
                 syncEnabled
-                  ? 'bg-green-500/20 text-green-400'
-                  : 'bg-gray-700 text-gray-400'
+                  ? colors.primary.active
+                  : `${colors.bg.input} ${colors.text.secondary}`
               }`}
               title={syncEnabled ? 'Sync enabled' : 'Sync disabled'}
             >
@@ -166,7 +167,7 @@ export function DualVideoPlayer({
           </div>
         </div>
 
-        <div className="relative bg-black rounded-lg overflow-hidden">
+        <div className={`relative ${colors.bg.video} rounded-lg overflow-hidden`}>
           <video
             ref={proVideoRef}
             src={proVideoUrl}
@@ -178,23 +179,23 @@ export function DualVideoPlayer({
 
         {/* Pro video progress (read-only when synced) */}
         <div className="flex items-center gap-3 mt-3">
-          <span className="text-sm text-gray-400 w-16 text-right font-mono">
+          <span className={`text-sm ${colors.text.secondary} w-16 text-right font-mono`}>
             {formatTime(proCurrentTime)}
           </span>
-          <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div className={`flex-1 h-2 ${colors.bg.slider} rounded-full overflow-hidden`}>
             <div
-              className="h-full bg-blue-400 transition-all"
+              className={`h-full ${colors.secondary.progress} transition-all`}
               style={{ width: `${proDuration > 0 ? (proCurrentTime / proDuration) * 100 : 0}%` }}
             />
           </div>
-          <span className="text-sm text-gray-400 w-16 font-mono">
+          <span className={`text-sm ${colors.text.secondary} w-16 font-mono`}>
             {formatTime(proDuration)}
           </span>
         </div>
       </div>
 
       {/* Phase Selector */}
-      <div className="bg-gray-800 rounded-xl px-4 py-2">
+      <div className={`${colors.bg.card} rounded-xl px-4 py-2`}>
         <PhaseSelector
           segments={userPhases}
           currentPhase={currentPhase}
@@ -203,12 +204,12 @@ export function DualVideoPlayer({
       </div>
 
       {/* Shared Playback Controls */}
-      <div className="bg-gray-800 rounded-xl p-4">
+      <div className={`${colors.bg.card} rounded-xl p-4`}>
         <div className="flex items-center justify-center gap-4">
           {/* Restart */}
           <button
             onClick={restart}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
+            className={`p-2 ${colors.control.default} transition-colors`}
             title="Restart"
           >
             <RotateCcw className="w-5 h-5" />
@@ -217,7 +218,7 @@ export function DualVideoPlayer({
           {/* Step back */}
           <button
             onClick={() => stepFrame(-1)}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
+            className={`p-2 ${colors.control.default} transition-colors`}
             title="Previous frame"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -226,7 +227,7 @@ export function DualVideoPlayer({
           {/* Play/Pause */}
           <button
             onClick={togglePlay}
-            className="p-3 bg-green-500 hover:bg-green-400 text-black rounded-full transition-colors"
+            className={`p-3 ${colors.primary.button} rounded-full transition-colors`}
             title={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
@@ -239,7 +240,7 @@ export function DualVideoPlayer({
           {/* Step forward */}
           <button
             onClick={() => stepFrame(1)}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
+            className={`p-2 ${colors.control.default} transition-colors`}
             title="Next frame"
           >
             <ChevronRight className="w-5 h-5" />

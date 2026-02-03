@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import type { PoseFrame } from '@/types/pose'
 import { PoseOverlay } from './PoseOverlay'
+import { colors } from '@/styles/colors'
 
 interface VideoPlayerProps {
   src: string
@@ -167,7 +168,7 @@ export function VideoPlayer({
   return (
     <div className="w-full max-w-4xl mx-auto">
       {/* Video Container */}
-      <div ref={containerRef} className="relative bg-black rounded-lg overflow-hidden">
+      <div ref={containerRef} className={`relative ${colors.bg.video} rounded-lg overflow-hidden`}>
         <video
           ref={videoRef}
           src={src}
@@ -190,10 +191,10 @@ export function VideoPlayer({
       <div className="mt-4 space-y-4">
         {/* Seek Bar */}
         <div className="flex items-center gap-3">
-          <div className="text-sm text-gray-400 w-24 text-right font-mono">
+          <div className={`text-sm ${colors.text.secondary} w-24 text-right font-mono`}>
             <div>{formatTime(currentTime)}</div>
             {currentFrame !== null && (
-              <div className="text-xs text-gray-500">F{currentFrame}</div>
+              <div className={`text-xs ${colors.text.subtle}`}>F{currentFrame}</div>
             )}
           </div>
           <input
@@ -203,18 +204,18 @@ export function VideoPlayer({
             step={0.001}
             value={currentTime}
             onChange={handleSeekBarChange}
-            className="flex-1 h-2 bg-gray-700 rounded-full appearance-none cursor-pointer
+            className={`flex-1 h-2 ${colors.bg.slider} rounded-full appearance-none cursor-pointer
               [&::-webkit-slider-thumb]:appearance-none
               [&::-webkit-slider-thumb]:w-4
               [&::-webkit-slider-thumb]:h-4
               [&::-webkit-slider-thumb]:bg-green-400
               [&::-webkit-slider-thumb]:rounded-full
-              [&::-webkit-slider-thumb]:cursor-pointer"
+              [&::-webkit-slider-thumb]:cursor-pointer`}
           />
-          <div className="text-sm text-gray-400 w-24 font-mono">
+          <div className={`text-sm ${colors.text.secondary} w-24 font-mono`}>
             <div>{formatTime(duration)}</div>
             {totalFrames !== null && (
-              <div className="text-xs text-gray-500">F{totalFrames}</div>
+              <div className={`text-xs ${colors.text.subtle}`}>F{totalFrames}</div>
             )}
           </div>
         </div>
@@ -223,7 +224,7 @@ export function VideoPlayer({
         <div className="flex items-center justify-center gap-2">
           <button
             onClick={restart}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
+            className={`p-2 ${colors.control.default} transition-colors`}
             title="Restart"
           >
             <RotateCcw className="w-5 h-5" />
@@ -231,7 +232,7 @@ export function VideoPlayer({
 
           <button
             onClick={() => seek(currentTime - 5)}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
+            className={`p-2 ${colors.control.default} transition-colors`}
             title="Back 5s"
           >
             <SkipBack className="w-5 h-5" />
@@ -239,7 +240,7 @@ export function VideoPlayer({
 
           <button
             onClick={() => stepFrame(-1)}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
+            className={`p-2 ${colors.control.default} transition-colors`}
             title="Previous frame"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -247,7 +248,7 @@ export function VideoPlayer({
 
           <button
             onClick={togglePlay}
-            className="p-3 bg-green-500 hover:bg-green-400 text-black rounded-full transition-colors"
+            className={`p-3 ${colors.primary.button} rounded-full transition-colors`}
             title={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
@@ -259,7 +260,7 @@ export function VideoPlayer({
 
           <button
             onClick={() => stepFrame(1)}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
+            className={`p-2 ${colors.control.default} transition-colors`}
             title="Next frame"
           >
             <ChevronRight className="w-5 h-5" />
@@ -267,7 +268,7 @@ export function VideoPlayer({
 
           <button
             onClick={() => seek(currentTime + 5)}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
+            className={`p-2 ${colors.control.default} transition-colors`}
             title="Forward 5s"
           >
             <SkipForward className="w-5 h-5" />
@@ -277,7 +278,7 @@ export function VideoPlayer({
             <button
               onClick={() => setShowOverlay(!showOverlay)}
               className={`p-2 transition-colors ${
-                showOverlay ? 'text-green-400 hover:text-green-300' : 'text-gray-400 hover:text-white'
+                showOverlay ? colors.control.active : colors.control.default
               }`}
               title={showOverlay ? 'Hide skeleton overlay' : 'Show skeleton overlay'}
             >
@@ -291,7 +292,7 @@ export function VideoPlayer({
           {onAnalyze && (
             <button
               onClick={onAnalyze}
-              className="px-6 py-2 bg-green-500 hover:bg-green-400 text-black font-medium rounded-lg transition-colors"
+              className={`px-6 py-2 ${colors.primary.button} font-medium rounded-lg transition-colors`}
             >
               Analyze Swing
             </button>
@@ -299,7 +300,7 @@ export function VideoPlayer({
           {onUploadNew && (
             <button
               onClick={onUploadNew}
-              className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+              className={`px-6 py-2 ${colors.button.secondary} font-medium rounded-lg transition-colors`}
             >
               Upload New Video
             </button>

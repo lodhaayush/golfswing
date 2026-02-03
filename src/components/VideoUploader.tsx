@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import { Upload, Film, AlertCircle } from 'lucide-react'
+import { colors } from '@/styles/colors'
 
 interface VideoUploaderProps {
   onVideoSelect: (file: File) => void
@@ -81,8 +82,8 @@ export function VideoUploader({ onVideoSelect }: VideoUploaderProps) {
           relative border-2 border-dashed rounded-xl p-12 text-center cursor-pointer
           transition-all duration-200
           ${isDragging
-            ? 'border-green-400 bg-green-400/10'
-            : 'border-gray-600 hover:border-gray-500 hover:bg-gray-800/50'
+            ? colors.primary.dragOver
+            : `${colors.border.input} hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800/50`
           }
         `}
       >
@@ -96,28 +97,28 @@ export function VideoUploader({ onVideoSelect }: VideoUploaderProps) {
 
         <div className="flex flex-col items-center gap-4">
           {isDragging ? (
-            <Film className="w-16 h-16 text-green-400" />
+            <Film className={`w-16 h-16 ${colors.primary.text}`} />
           ) : (
-            <Upload className="w-16 h-16 text-gray-400" />
+            <Upload className={`w-16 h-16 ${colors.text.secondary}`} />
           )}
 
           <div>
-            <p className="text-lg font-medium text-white">
+            <p className={`text-lg font-medium ${colors.text.primary}`}>
               {isDragging ? 'Drop your video here' : 'Drag & drop your swing video'}
             </p>
-            <p className="text-sm text-gray-400 mt-1">
+            <p className={`text-sm ${colors.text.secondary} mt-1`}>
               or click to browse
             </p>
           </div>
 
-          <p className="text-xs text-gray-500">
+          <p className={`text-xs ${colors.text.subtle}`}>
             Supports MP4, MOV, WebM (max 500MB)
           </p>
         </div>
       </div>
 
       {error && (
-        <div className="mt-4 flex items-center gap-2 text-red-400 bg-red-400/10 px-4 py-3 rounded-lg">
+        <div className={`mt-4 flex items-center gap-2 ${colors.status.error} ${colors.status.errorBg} px-4 py-3 rounded-lg`}>
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
           <p className="text-sm">{error}</p>
         </div>

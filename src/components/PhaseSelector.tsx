@@ -1,4 +1,5 @@
 import type { PhaseSegment, SwingPhase } from '@/types/analysis'
+import { colors } from '@/styles/colors'
 
 interface PhaseSelectorProps {
   segments: PhaseSegment[]
@@ -44,10 +45,10 @@ export function PhaseSelector({ segments, currentPhase, onPhaseSelect }: PhaseSe
             className={`
               px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-medium
               ${isCurrent
-                ? 'bg-green-500/20 text-green-400 ring-2 ring-green-500'
+                ? `${colors.primary.active} ${colors.primary.ring}`
                 : isAvailable
-                ? 'text-gray-400 hover:text-white hover:bg-gray-700'
-                : 'text-gray-600 cursor-not-allowed opacity-50'
+                ? `${colors.button.ghost} ${colors.bg.hover}`
+                : `${colors.text.disabled} cursor-not-allowed opacity-50`
               }
             `}
           >

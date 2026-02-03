@@ -1,4 +1,5 @@
 import { ChevronDown } from 'lucide-react'
+import { colors } from '@/styles/colors'
 import type { ProVideoReference } from '@/types/proVideo'
 import type { CameraAngle } from '@/utils/angleCalculations'
 import type { ClubType } from '@/types/analysis'
@@ -25,7 +26,7 @@ export function ProVideoSelector({
 
   if (availableVideos.length === 0) {
     return (
-      <div className="px-4 py-2 bg-gray-700 text-gray-400 rounded-lg text-sm">
+      <div className={`px-4 py-2 ${colors.bg.input} ${colors.text.secondary} rounded-lg text-sm`}>
         No pro videos available for this camera angle
       </div>
     )
@@ -34,7 +35,7 @@ export function ProVideoSelector({
   return (
     <div className="relative">
       <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-400">Compare to:</span>
+        <span className={`text-sm ${colors.text.secondary}`}>Compare to:</span>
         <div className="relative">
           <select
             value={selected?.id || ''}
@@ -42,7 +43,7 @@ export function ProVideoSelector({
               const video = availableVideos.find((v) => v.id === e.target.value)
               if (video) onSelect(video)
             }}
-            className="appearance-none px-3 py-2 pr-8 bg-gray-700 text-white text-sm rounded-lg border border-gray-600 focus:outline-none focus:border-green-500 cursor-pointer"
+            className={`appearance-none px-3 py-2 pr-8 ${colors.bg.input} ${colors.text.primary} text-sm rounded-lg border ${colors.border.input} focus:outline-none ${colors.primary.focusBorder} cursor-pointer`}
           >
             {!selected && (
               <option value="" disabled>
@@ -55,7 +56,7 @@ export function ProVideoSelector({
               </option>
             ))}
           </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <ChevronDown className={`absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 ${colors.text.disabled} pointer-events-none`} />
         </div>
       </div>
 

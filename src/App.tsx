@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { del, keys } from 'idb-keyval'
 import { BookOpen, Lightbulb } from 'lucide-react'
+import { colors } from '@/styles/colors'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { VideoUploader } from '@/components/VideoUploader'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { AnalysisProgress } from '@/components/AnalysisProgress'
@@ -248,21 +250,21 @@ function App() {
   })
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className={`min-h-screen ${colors.bg.page} ${colors.text.primary}`}>
       {/* Header */}
-      <header className="border-b border-gray-700 bg-gray-800">
+      <header className={`border-b ${colors.border.default} ${colors.bg.header}`}>
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-green-400">Golf Swing Coach</h1>
-            <p className="text-gray-400 text-sm">Analyze your swing with AI-powered pose detection</p>
+            <h1 className={`text-2xl font-bold ${colors.primary.text}`}>Golf Swing Coach</h1>
+            <p className={`${colors.text.secondary} text-sm`}>Analyze your swing with AI-powered pose detection</p>
           </div>
           <nav className="flex items-center gap-2">
             <button
               onClick={appState === 'learning' || appState === 'mistakeDetail' ? handleBackFromLearning : undefined}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 appState !== 'learning' && appState !== 'mistakeDetail'
-                  ? 'bg-green-500/20 text-green-400'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                  ? colors.primary.active
+                  : `${colors.text.secondary} ${colors.text.hover} ${colors.bg.hover}`
               }`}
               disabled={appState === 'analyzing'}
             >
@@ -272,14 +274,15 @@ function App() {
               onClick={handleGoToLearning}
               className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
                 appState === 'learning' || appState === 'mistakeDetail'
-                  ? 'bg-blue-500/20 text-blue-400'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                  ? colors.secondary.active
+                  : `${colors.text.secondary} ${colors.text.hover} ${colors.bg.hover}`
               }`}
               disabled={appState === 'analyzing'}
             >
               <BookOpen className="w-4 h-4" />
               Learn
             </button>
+            <ThemeToggle />
           </nav>
         </div>
       </header>
@@ -293,16 +296,16 @@ function App() {
             {/* Tips Section */}
             <div className="max-w-xl mx-auto">
               <div className="flex items-center gap-2 mb-3">
-                <Lightbulb className="w-5 h-5 text-gray-400" />
-                <h3 className="text-lg font-medium text-white">Tips for best results</h3>
+                <Lightbulb className={`w-5 h-5 ${colors.text.secondary}`} />
+                <h3 className={`text-lg font-medium ${colors.text.primary}`}>Tips for best results</h3>
               </div>
-              <ul className="space-y-2 text-gray-300">
+              <ul className={`space-y-2 ${colors.text.muted}`}>
                 <li className="flex items-baseline gap-2">
-                  <span className="text-gray-400">1.</span>
+                  <span className={colors.text.secondary}>1.</span>
                   <span>Trim the video to just contain your swing</span>
                 </li>
                 <li className="flex items-baseline gap-2">
-                  <span className="text-gray-400">2.</span>
+                  <span className={colors.text.secondary}>2.</span>
                   <span>Normal speed videos give more accurate results than slo-mo videos</span>
                 </li>
               </ul>

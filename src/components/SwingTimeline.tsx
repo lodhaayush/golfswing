@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import type { PhaseSegment } from '@/types/analysis'
 import { getPhaseDisplayName, getPhaseColor } from '@/utils/phaseDetection'
+import { colors } from '@/styles/colors'
 
 interface SwingTimelineProps {
   segments: PhaseSegment[]
@@ -40,8 +41,8 @@ export function SwingTimeline({
 
   if (segments.length === 0 || duration === 0) {
     return (
-      <div className="w-full bg-gray-800 rounded-lg p-4">
-        <p className="text-gray-500 text-sm text-center">No phase data available</p>
+      <div className={`w-full ${colors.bg.card} rounded-lg p-4`}>
+        <p className={`${colors.text.subtle} text-sm text-center`}>No phase data available</p>
       </div>
     )
   }
@@ -49,12 +50,12 @@ export function SwingTimeline({
   const currentPercentage = (currentTime / duration) * 100
 
   return (
-    <div className="w-full bg-gray-800 rounded-lg p-4 space-y-3">
-      <h3 className="text-sm font-medium text-gray-400">Swing Phases</h3>
+    <div className={`w-full ${colors.bg.card} rounded-lg p-4 space-y-3`}>
+      <h3 className={`text-sm font-medium ${colors.text.secondary}`}>Swing Phases</h3>
 
       {/* Timeline bar */}
       <div
-        className="relative h-8 bg-gray-700 rounded-lg overflow-hidden cursor-pointer"
+        className={`relative h-8 ${colors.bg.slider} rounded-lg overflow-hidden cursor-pointer`}
         onClick={handleClick}
       >
         {/* Phase segments */}
@@ -94,22 +95,22 @@ export function SwingTimeline({
         {segments.map((segment, index) => (
           <button
             key={index}
-            className="flex items-center gap-1.5 px-2 py-1 rounded text-xs hover:bg-gray-700 transition-colors"
+            className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs ${colors.bg.hover} transition-colors`}
             onClick={() => handlePhaseClick(segment)}
           >
             <span
               className="w-2 h-2 rounded-full"
               style={{ backgroundColor: getPhaseColor(segment.phase) }}
             />
-            <span className="text-gray-300">{getPhaseDisplayName(segment.phase)}</span>
+            <span className={colors.text.muted}>{getPhaseDisplayName(segment.phase)}</span>
           </button>
         ))}
       </div>
 
       {/* Current phase display */}
       <div className="text-center">
-        <span className="text-sm text-gray-400">Current: </span>
-        <span className="text-sm font-medium text-white">
+        <span className={`text-sm ${colors.text.secondary}`}>Current: </span>
+        <span className={`text-sm font-medium ${colors.text.primary}`}>
           {getCurrentPhase(segments, currentTime)}
         </span>
       </div>
