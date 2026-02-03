@@ -170,11 +170,10 @@ export function SwingResults({ result, onUploadNew, onClubTypeChange, onCompare,
   const detectedIds = new Set(result.detectedMistakes?.map(m => m.mistakeId) || [])
   const notDetectedIssues = ALL_ACTIVE_DETECTOR_IDS
     .filter(id => !detectedIds.has(id))
-    .map(id => {
+    .flatMap(id => {
       const mistake = getMistakeById(id)
-      return mistake ? { id, name: mistake.name, category: mistake.category, description: mistake.description } : null
+      return mistake ? [{ id, name: mistake.name, category: mistake.category, description: mistake.description }] : []
     })
-    .filter((item): item is { id: SwingMistakeId; name: string; category: string; description: string } => item !== null)
 
   // Sync selectedClub when result changes (e.g., after re-analysis with override)
   useEffect(() => {

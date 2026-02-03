@@ -31,9 +31,8 @@ export const detectLossOfSpineAngle: MistakeDetector = (input: DetectorInput): D
   const spineDiff = Math.abs(metrics.addressSpineAngle - metrics.impactSpineAngle)
 
   // Use different thresholds based on camera angle
-  const thresholds = cameraAngle === 'face-on'
-    ? FEEDBACK_THRESHOLDS.SPINE_DIFF.FACE_ON
-    : FEEDBACK_THRESHOLDS.SPINE_DIFF.DEFAULT
+  // Note: We already returned early for face-on, so this is always DTL/oblique
+  const thresholds = FEEDBACK_THRESHOLDS.SPINE_DIFF.DEFAULT
 
   logger.info('LOSS_OF_SPINE_ANGLE Debug:', {
     cameraAngle,
@@ -59,7 +58,7 @@ export const detectLossOfSpineAngle: MistakeDetector = (input: DetectorInput): D
   // Calculate severity
   let severity: number
   let message: string
-  let confidence = cameraAngle === 'face-on' ? 0.7 : 0.85
+  const confidence = 0.85
 
   if (spineDiff < thresholds.WARNING) {
     // Minor posture change
