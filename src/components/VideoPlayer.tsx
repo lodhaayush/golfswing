@@ -3,8 +3,6 @@ import type { RefObject } from 'react'
 import {
   Play,
   Pause,
-  SkipBack,
-  SkipForward,
   ChevronLeft,
   ChevronRight,
   RotateCcw,
@@ -231,14 +229,6 @@ export function VideoPlayer({
           </button>
 
           <button
-            onClick={() => seek(currentTime - 5)}
-            className={`p-2 ${colors.control.default} transition-colors`}
-            title="Back 5s"
-          >
-            <SkipBack className="w-5 h-5" />
-          </button>
-
-          <button
             onClick={() => stepFrame(-1)}
             className={`p-2 ${colors.control.default} transition-colors`}
             title="Previous frame"
@@ -264,14 +254,6 @@ export function VideoPlayer({
             title="Next frame"
           >
             <ChevronRight className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={() => seek(currentTime + 5)}
-            className={`p-2 ${colors.control.default} transition-colors`}
-            title="Forward 5s"
-          >
-            <SkipForward className="w-5 h-5" />
           </button>
 
           {hasPoseData && (
