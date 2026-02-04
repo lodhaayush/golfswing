@@ -1,0 +1,16 @@
+# Xcode build artifacts
+build/
+DerivedData/
+*.xcuserstate
+
+# Xcode project user data
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+
+# CocoaPods (if used later)
+Pods/
+
+# Temporary files
+*.swp
+*~
+.DS_Store

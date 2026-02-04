@@ -1,0 +1,479 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 63;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00959F9992D59EE31B81EA79 /* PoseOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0484F64CAC4E09135CF781B5 /* PoseOverlayView.swift */; };
+		0B14672FFE3AA5D28F02FD64 /* AngleCalculations.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB25C78D649AADDC9E25C3EA /* AngleCalculations.swift */; };
+		2B9E1E54A570E9B72928B460 /* FollowThroughDetectors.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA1D3D312ED2A713EA03E5A6 /* FollowThroughDetectors.swift */; };
+		3860D699A3AEC5824E438FDA /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277FC60CD1C37992D9202285 /* ContentView.swift */; };
+		38CC3E9F7BB41DB238D34C9A /* DetectorProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CB060E4C2BF60021BC8983F /* DetectorProtocol.swift */; };
+		4FE249515DFD7D3FE5EB6CD7 /* SwingAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07D507D961EE2059FB40468C /* SwingAnalyzer.swift */; };
+		55E9E4B8EAB85BDF5553ADC7 /* VideoUploadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C0481AB49E89B830C22B158 /* VideoUploadView.swift */; };
+		5AAB1ECC00DFCAEC396168D4 /* ComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE76CFBE73988A8D799F9E3 /* ComparisonView.swift */; };
+		67B7DD3C763F61D78D13BA0D /* LearningView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6378D4D2868C61FBD45BBE1E /* LearningView.swift */; };
+		68003F7D7091DC0D959D36B6 /* TempoDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74BAA6D8224D0A20584FBB54 /* TempoDetector.swift */; };
+		80306A27931430C68359F2CE /* PoseData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EAF11E43579C35719662789 /* PoseData.swift */; };
+		86F0B45411DE738C6F4E1DDC /* VideoPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD7A5558441CB06E334B9C65 /* VideoPlayerView.swift */; };
+		8F21BC6AFABBA8ECE2FEF4D6 /* VideoAnalysisViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C551D7EA42509833CFBA18B /* VideoAnalysisViewModel.swift */; };
+		9C033C3ECCCA4572F7F9A158 /* SwingAnalysis.swift in Sources */ = {isa = PBXBuildFile; fileRef = CACCB9CF37192B7079172101 /* SwingAnalysis.swift */; };
+		A22F361776EE59A6366713FC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EDE91F93E0F53AB4AA4C4488 /* Assets.xcassets */; };
+		BCB7C6E6B214F868051BA419 /* SwingPhase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C939B636506246FFF09F1A6 /* SwingPhase.swift */; };
+		C33CF8E1E9B1BD76729E93AE /* SetupDetectors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F95BC3B06F9EF87B51F7637 /* SetupDetectors.swift */; };
+		C3B6178835F40B484B84FB01 /* PhaseDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 733E77A1962EDB1FEBD4A445 /* PhaseDetection.swift */; };
+		C66EAB0BC92F8B2A7F4A49B7 /* BackswingDetectors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7954EDC0EE8D9C9B4E93EEE6 /* BackswingDetectors.swift */; };
+		CA0781E6413709C3A20E4F16 /* ImpactDetectors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CF9AFC01A636E9B8E35868B /* ImpactDetectors.swift */; };
+		CB3F92D252087DEEAAB1E584 /* PoseDetectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AD23D598E3D437FE56EA39B /* PoseDetectionService.swift */; };
+		DAFC89E1C4BC43E02A259A6B /* GolfSwingCoachApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6EB26C2299619A2C2927BFB /* GolfSwingCoachApp.swift */; };
+		DE6BFBACD99BAA3C1AA3C58C /* MetricsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 173B20308ACF17C46128E16B /* MetricsCard.swift */; };
+		E9283EFBF5F6C3E5EA992513 /* ResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E816DBCB1FF3716F955AE853 /* ResultsView.swift */; };
+		F3037C481C8927F35ACE24CC /* DownswingDetectors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A489C8F5C625F29D2D79E04 /* DownswingDetectors.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0484F64CAC4E09135CF781B5 /* PoseOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoseOverlayView.swift; sourceTree = "<group>"; };
+		07D507D961EE2059FB40468C /* SwingAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwingAnalyzer.swift; sourceTree = "<group>"; };
+		173B20308ACF17C46128E16B /* MetricsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricsCard.swift; sourceTree = "<group>"; };
+		1C0481AB49E89B830C22B158 /* VideoUploadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoUploadView.swift; sourceTree = "<group>"; };
+		1C551D7EA42509833CFBA18B /* VideoAnalysisViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoAnalysisViewModel.swift; sourceTree = "<group>"; };
+		1CF9AFC01A636E9B8E35868B /* ImpactDetectors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImpactDetectors.swift; sourceTree = "<group>"; };
+		277FC60CD1C37992D9202285 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		3CB060E4C2BF60021BC8983F /* DetectorProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectorProtocol.swift; sourceTree = "<group>"; };
+		3EAF11E43579C35719662789 /* PoseData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoseData.swift; sourceTree = "<group>"; };
+		4AD23D598E3D437FE56EA39B /* PoseDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoseDetectionService.swift; sourceTree = "<group>"; };
+		4BE76CFBE73988A8D799F9E3 /* ComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComparisonView.swift; sourceTree = "<group>"; };
+		5A489C8F5C625F29D2D79E04 /* DownswingDetectors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownswingDetectors.swift; sourceTree = "<group>"; };
+		6378D4D2868C61FBD45BBE1E /* LearningView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningView.swift; sourceTree = "<group>"; };
+		6C939B636506246FFF09F1A6 /* SwingPhase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwingPhase.swift; sourceTree = "<group>"; };
+		733E77A1962EDB1FEBD4A445 /* PhaseDetection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhaseDetection.swift; sourceTree = "<group>"; };
+		74BAA6D8224D0A20584FBB54 /* TempoDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempoDetector.swift; sourceTree = "<group>"; };
+		7954EDC0EE8D9C9B4E93EEE6 /* BackswingDetectors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackswingDetectors.swift; sourceTree = "<group>"; };
+		7F95BC3B06F9EF87B51F7637 /* SetupDetectors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupDetectors.swift; sourceTree = "<group>"; };
+		A0276216D9EFE1B0923924CA /* GolfSwingCoach.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GolfSwingCoach.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A6EB26C2299619A2C2927BFB /* GolfSwingCoachApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfSwingCoachApp.swift; sourceTree = "<group>"; };
+		CACCB9CF37192B7079172101 /* SwingAnalysis.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwingAnalysis.swift; sourceTree = "<group>"; };
+		E816DBCB1FF3716F955AE853 /* ResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsView.swift; sourceTree = "<group>"; };
+		EA1D3D312ED2A713EA03E5A6 /* FollowThroughDetectors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowThroughDetectors.swift; sourceTree = "<group>"; };
+		EB25C78D649AADDC9E25C3EA /* AngleCalculations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AngleCalculations.swift; sourceTree = "<group>"; };
+		EDE91F93E0F53AB4AA4C4488 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		FD7A5558441CB06E334B9C65 /* VideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		2AEA8ABAD1FBCD719CB89D70 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				173B20308ACF17C46128E16B /* MetricsCard.swift */,
+				0484F64CAC4E09135CF781B5 /* PoseOverlayView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		2E7546CE2E095B37992B36B2 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				EDE91F93E0F53AB4AA4C4488 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		8208B0E888EE8F40887B436B /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				EB25C78D649AADDC9E25C3EA /* AngleCalculations.swift */,
+				733E77A1962EDB1FEBD4A445 /* PhaseDetection.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		91DF999A867E6C6A30F8DC1F /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A0276216D9EFE1B0923924CA /* GolfSwingCoach.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B2E188F2205394B71C943609 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				1C551D7EA42509833CFBA18B /* VideoAnalysisViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		BD79589F27A08D2160B8419D /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				3EAF11E43579C35719662789 /* PoseData.swift */,
+				CACCB9CF37192B7079172101 /* SwingAnalysis.swift */,
+				6C939B636506246FFF09F1A6 /* SwingPhase.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		BF717AB2C5621B6E8FE721DF /* GolfSwingCoach */ = {
+			isa = PBXGroup;
+			children = (
+				A6EB26C2299619A2C2927BFB /* GolfSwingCoachApp.swift */,
+				C73B15AF0842301E95A55405 /* Detectors */,
+				BD79589F27A08D2160B8419D /* Models */,
+				2E7546CE2E095B37992B36B2 /* Resources */,
+				F59DE35F156B2D5153D994A3 /* Services */,
+				8208B0E888EE8F40887B436B /* Utils */,
+				B2E188F2205394B71C943609 /* ViewModels */,
+				E7AAA1BE34670DB8D940FFF5 /* Views */,
+			);
+			path = GolfSwingCoach;
+			sourceTree = "<group>";
+		};
+		C73B15AF0842301E95A55405 /* Detectors */ = {
+			isa = PBXGroup;
+			children = (
+				7954EDC0EE8D9C9B4E93EEE6 /* BackswingDetectors.swift */,
+				3CB060E4C2BF60021BC8983F /* DetectorProtocol.swift */,
+				5A489C8F5C625F29D2D79E04 /* DownswingDetectors.swift */,
+				EA1D3D312ED2A713EA03E5A6 /* FollowThroughDetectors.swift */,
+				1CF9AFC01A636E9B8E35868B /* ImpactDetectors.swift */,
+				7F95BC3B06F9EF87B51F7637 /* SetupDetectors.swift */,
+				74BAA6D8224D0A20584FBB54 /* TempoDetector.swift */,
+			);
+			path = Detectors;
+			sourceTree = "<group>";
+		};
+		E46BC85DB4D4608412717390 = {
+			isa = PBXGroup;
+			children = (
+				BF717AB2C5621B6E8FE721DF /* GolfSwingCoach */,
+				91DF999A867E6C6A30F8DC1F /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E7AAA1BE34670DB8D940FFF5 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				4BE76CFBE73988A8D799F9E3 /* ComparisonView.swift */,
+				277FC60CD1C37992D9202285 /* ContentView.swift */,
+				6378D4D2868C61FBD45BBE1E /* LearningView.swift */,
+				E816DBCB1FF3716F955AE853 /* ResultsView.swift */,
+				FD7A5558441CB06E334B9C65 /* VideoPlayerView.swift */,
+				1C0481AB49E89B830C22B158 /* VideoUploadView.swift */,
+				2AEA8ABAD1FBCD719CB89D70 /* Components */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		F59DE35F156B2D5153D994A3 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				4AD23D598E3D437FE56EA39B /* PoseDetectionService.swift */,
+				07D507D961EE2059FB40468C /* SwingAnalyzer.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		EB763A021259017229CBB3C2 /* GolfSwingCoach */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A8895147B91E7B281963CE42 /* Build configuration list for PBXNativeTarget "GolfSwingCoach" */;
+			buildPhases = (
+				D5A0BBCB90BE84CE18853AB8 /* Sources */,
+				3CAC00CAC28FD1B8320C34BE /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GolfSwingCoach;
+			packageProductDependencies = (
+			);
+			productName = GolfSwingCoach;
+			productReference = A0276216D9EFE1B0923924CA /* GolfSwingCoach.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9B0C83716BF7C357D9025EF3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					EB763A021259017229CBB3C2 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 21F98B641E2CB75B6BBBCD21 /* Build configuration list for PBXProject "GolfSwingCoach" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = E46BC85DB4D4608412717390;
+			minimizedProjectReferenceProxies = 1;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				EB763A021259017229CBB3C2 /* GolfSwingCoach */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		3CAC00CAC28FD1B8320C34BE /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A22F361776EE59A6366713FC /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D5A0BBCB90BE84CE18853AB8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0B14672FFE3AA5D28F02FD64 /* AngleCalculations.swift in Sources */,
+				C66EAB0BC92F8B2A7F4A49B7 /* BackswingDetectors.swift in Sources */,
+				5AAB1ECC00DFCAEC396168D4 /* ComparisonView.swift in Sources */,
+				3860D699A3AEC5824E438FDA /* ContentView.swift in Sources */,
+				38CC3E9F7BB41DB238D34C9A /* DetectorProtocol.swift in Sources */,
+				F3037C481C8927F35ACE24CC /* DownswingDetectors.swift in Sources */,
+				2B9E1E54A570E9B72928B460 /* FollowThroughDetectors.swift in Sources */,
+				DAFC89E1C4BC43E02A259A6B /* GolfSwingCoachApp.swift in Sources */,
+				CA0781E6413709C3A20E4F16 /* ImpactDetectors.swift in Sources */,
+				67B7DD3C763F61D78D13BA0D /* LearningView.swift in Sources */,
+				DE6BFBACD99BAA3C1AA3C58C /* MetricsCard.swift in Sources */,
+				C3B6178835F40B484B84FB01 /* PhaseDetection.swift in Sources */,
+				80306A27931430C68359F2CE /* PoseData.swift in Sources */,
+				CB3F92D252087DEEAAB1E584 /* PoseDetectionService.swift in Sources */,
+				00959F9992D59EE31B81EA79 /* PoseOverlayView.swift in Sources */,
+				E9283EFBF5F6C3E5EA992513 /* ResultsView.swift in Sources */,
+				C33CF8E1E9B1BD76729E93AE /* SetupDetectors.swift in Sources */,
+				9C033C3ECCCA4572F7F9A158 /* SwingAnalysis.swift in Sources */,
+				4FE249515DFD7D3FE5EB6CD7 /* SwingAnalyzer.swift in Sources */,
+				BCB7C6E6B214F868051BA419 /* SwingPhase.swift in Sources */,
+				68003F7D7091DC0D959D36B6 /* TempoDetector.swift in Sources */,
+				8F21BC6AFABBA8ECE2FEF4D6 /* VideoAnalysisViewModel.swift in Sources */,
+				86F0B45411DE738C6F4E1DDC /* VideoPlayerView.swift in Sources */,
+				55E9E4B8EAB85BDF5553ADC7 /* VideoUploadView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		187B99BE00B01A00BDF10997 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = F28SX298WD;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_GENERATION_MODE = GeneratedFile;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Golf Swing Coach can record swing videos for analysis";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Golf Swing Coach needs access to your photos to analyze swing videos";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.golfswing.coach;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1973C1679D51E08AA5D7FE29 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = F28SX298WD;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_GENERATION_MODE = GeneratedFile;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Golf Swing Coach can record swing videos for analysis";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Golf Swing Coach needs access to your photos to analyze swing videos";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.golfswing.coach;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7D9965570595DCF713955FDA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		ED4823C551768CEF1401CF7D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		21F98B641E2CB75B6BBBCD21 /* Build configuration list for PBXProject "GolfSwingCoach" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ED4823C551768CEF1401CF7D /* Debug */,
+				7D9965570595DCF713955FDA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A8895147B91E7B281963CE42 /* Build configuration list for PBXNativeTarget "GolfSwingCoach" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				187B99BE00B01A00BDF10997 /* Debug */,
+				1973C1679D51E08AA5D7FE29 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 9B0C83716BF7C357D9025EF3 /* Project object */;
+}
