@@ -19,6 +19,8 @@ final class PoseDetectionService: @unchecked Sendable {
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> [PoseFrame] {
 
+        log.info("Pose Detection Started | {\"videoURL\": \"\(videoURL.lastPathComponent)\", \"targetFPS\": \(targetFPS)}")
+
         let asset = AVAsset(url: videoURL)
 
         // Get video duration and calculate frame times
@@ -58,12 +60,15 @@ final class PoseDetectionService: @unchecked Sendable {
                 }
             } catch {
                 // Skip frames that fail to extract
-                print("Failed to extract frame \(frameIndex): \(error)")
+                log.warning("Frame Extraction Failed | {\"frameIndex\": \(frameIndex), \"error\": \"\(error.localizedDescription)\"}")
             }
 
             // Report progress
             progress(Double(frameIndex + 1) / Double(frameCount))
         }
+
+        let successRate = frameCount > 0 ? Double(frames.count) / Double(frameCount) * 100 : 0
+        log.info("Pose Detection Complete | {\"extractedFrames\": \(frames.count), \"expectedFrames\": \(frameCount), \"successRate\": \(String(format: "%.1f", successRate))}")
 
         return frames
     }

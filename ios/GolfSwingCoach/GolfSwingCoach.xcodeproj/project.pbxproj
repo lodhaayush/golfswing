@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -22,6 +22,7 @@
 		8F21BC6AFABBA8ECE2FEF4D6 /* VideoAnalysisViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C551D7EA42509833CFBA18B /* VideoAnalysisViewModel.swift */; };
 		9C033C3ECCCA4572F7F9A158 /* SwingAnalysis.swift in Sources */ = {isa = PBXBuildFile; fileRef = CACCB9CF37192B7079172101 /* SwingAnalysis.swift */; };
 		A22F361776EE59A6366713FC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EDE91F93E0F53AB4AA4C4488 /* Assets.xcassets */; };
+		B5E0BD726B5791E607F04552 /* LoggerSetup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A9AB97AD46625229296CC2 /* LoggerSetup.swift */; };
 		BCB7C6E6B214F868051BA419 /* SwingPhase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C939B636506246FFF09F1A6 /* SwingPhase.swift */; };
 		C33CF8E1E9B1BD76729E93AE /* SetupDetectors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F95BC3B06F9EF87B51F7637 /* SetupDetectors.swift */; };
 		C3B6178835F40B484B84FB01 /* PhaseDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 733E77A1962EDB1FEBD4A445 /* PhaseDetection.swift */; };
@@ -36,6 +37,7 @@
 
 /* Begin PBXFileReference section */
 		0484F64CAC4E09135CF781B5 /* PoseOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoseOverlayView.swift; sourceTree = "<group>"; };
+		04A9AB97AD46625229296CC2 /* LoggerSetup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggerSetup.swift; sourceTree = "<group>"; };
 		07D507D961EE2059FB40468C /* SwingAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwingAnalyzer.swift; sourceTree = "<group>"; };
 		173B20308ACF17C46128E16B /* MetricsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricsCard.swift; sourceTree = "<group>"; };
 		1C0481AB49E89B830C22B158 /* VideoUploadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoUploadView.swift; sourceTree = "<group>"; };
@@ -53,7 +55,7 @@
 		74BAA6D8224D0A20584FBB54 /* TempoDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempoDetector.swift; sourceTree = "<group>"; };
 		7954EDC0EE8D9C9B4E93EEE6 /* BackswingDetectors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackswingDetectors.swift; sourceTree = "<group>"; };
 		7F95BC3B06F9EF87B51F7637 /* SetupDetectors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupDetectors.swift; sourceTree = "<group>"; };
-		A0276216D9EFE1B0923924CA /* GolfSwingCoach.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GolfSwingCoach.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A0276216D9EFE1B0923924CA /* GolfSwingCoach.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GolfSwingCoach.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A6EB26C2299619A2C2927BFB /* GolfSwingCoachApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfSwingCoachApp.swift; sourceTree = "<group>"; };
 		CACCB9CF37192B7079172101 /* SwingAnalysis.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwingAnalysis.swift; sourceTree = "<group>"; };
 		E816DBCB1FF3716F955AE853 /* ResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsView.swift; sourceTree = "<group>"; };
@@ -85,6 +87,7 @@
 			isa = PBXGroup;
 			children = (
 				EB25C78D649AADDC9E25C3EA /* AngleCalculations.swift */,
+				04A9AB97AD46625229296CC2 /* LoggerSetup.swift */,
 				733E77A1962EDB1FEBD4A445 /* PhaseDetection.swift */,
 			);
 			path = Utils;
@@ -207,6 +210,7 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					EB763A021259017229CBB3C2 = {
+						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -221,6 +225,7 @@
 			);
 			mainGroup = E46BC85DB4D4608412717390;
 			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -255,6 +260,7 @@
 				DAFC89E1C4BC43E02A259A6B /* GolfSwingCoachApp.swift in Sources */,
 				CA0781E6413709C3A20E4F16 /* ImpactDetectors.swift in Sources */,
 				67B7DD3C763F61D78D13BA0D /* LearningView.swift in Sources */,
+				B5E0BD726B5791E607F04552 /* LoggerSetup.swift in Sources */,
 				DE6BFBACD99BAA3C1AA3C58C /* MetricsCard.swift in Sources */,
 				C3B6178835F40B484B84FB01 /* PhaseDetection.swift in Sources */,
 				80306A27931430C68359F2CE /* PoseData.swift in Sources */,
@@ -281,7 +287,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = F28SX298WD;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_GENERATION_MODE = GeneratedFile;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Golf Swing Coach can record swing videos for analysis";
@@ -306,7 +312,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = F28SX298WD;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_GENERATION_MODE = GeneratedFile;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Golf Swing Coach can record swing videos for analysis";

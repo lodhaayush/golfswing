@@ -55,6 +55,8 @@ struct ReversePivotDetector: SwingDetector {
         let isReversePivot = isRightHanded ? normalizedShift < -0.05 : normalizedShift > 0.05
         let shiftAmount = abs(normalizedShift)
 
+        log.debug("Reverse Pivot Debug | {\"normalizedShift\": \(String(format: "%.3f", normalizedShift)), \"isRightHanded\": \(isRightHanded), \"threshold\": 0.05, \"detected\": \(isReversePivot)}")
+
         if !isReversePivot {
             return DetectorResult(
                 mistakeId: mistakeId,
@@ -112,6 +114,8 @@ struct InsufficientShoulderTurnDetector: SwingDetector {
         // Ideal shoulder turn: 80-100 degrees for most golfers
         let minimumTurn: Double = 70
         let idealTurn: Double = 90
+
+        log.debug("Shoulder Turn Debug | {\"shoulderRotation\": \"\(String(format: "%.1f", shoulderRotation))°\", \"minimumTurn\": \"\(String(format: "%.0f", minimumTurn))°\", \"cameraAngle\": \"\(input.cameraAngle.rawValue)\", \"detected\": \(shoulderRotation < minimumTurn)}")
 
         if shoulderRotation >= minimumTurn {
             return DetectorResult(
@@ -174,6 +178,8 @@ struct OverRotationDetector: SwingDetector {
         let shoulderOverRotation = max(0, shoulderRotation - maxShoulderTurn)
         let hipOverRotation = max(0, hipRotation - maxHipTurn)
 
+        log.debug("Over Rotation Debug | {\"shoulderRotation\": \"\(String(format: "%.1f", shoulderRotation))°\", \"hipRotation\": \"\(String(format: "%.1f", hipRotation))°\", \"maxShoulderTurn\": \"\(String(format: "%.0f", maxShoulderTurn))°\", \"maxHipTurn\": \"\(String(format: "%.0f", maxHipTurn))°\", \"detected\": \(shoulderOverRotation > 0 || hipOverRotation > 0)}")
+
         if shoulderOverRotation == 0 && hipOverRotation == 0 {
             return DetectorResult(
                 mistakeId: mistakeId,
@@ -228,6 +234,8 @@ struct BentLeadArmDetector: SwingDetector {
 
         // Ideal: 170-180 degrees (nearly straight)
         let minimumExtension: Double = 155
+
+        log.debug("Bent Lead Arm Debug | {\"armExtension\": \"\(String(format: "%.1f", armExtension))°\", \"minimumExtension\": \"\(String(format: "%.0f", minimumExtension))°\", \"detected\": \(armExtension < minimumExtension)}")
 
         if armExtension >= minimumExtension {
             return DetectorResult(
@@ -303,6 +311,8 @@ struct LiftingHeadDetector: SwingDetector {
 
         let normalizedLift = maxHeadLift / bodyHeight
         let threshold: CGFloat = 0.03  // 3% of body height
+
+        log.debug("Lifting Head Debug | {\"normalizedLift\": \(String(format: "%.3f", normalizedLift)), \"threshold\": \(threshold), \"detected\": \(normalizedLift >= threshold)}")
 
         if normalizedLift < threshold {
             return DetectorResult(

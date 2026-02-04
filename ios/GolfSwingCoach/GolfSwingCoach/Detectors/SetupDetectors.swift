@@ -29,6 +29,9 @@ struct PoorPostureDetector: SwingDetector {
         let idealMin: Double = input.clubType == .driver ? 20 : 25
         let idealMax: Double = input.clubType == .driver ? 40 : 45
 
+        let detected = spineAngle < idealMin || spineAngle > idealMax
+        log.debug("Poor Posture Debug | {\"spineAngle\": \"\(String(format: "%.1f", spineAngle))°\", \"idealRange\": \"\(String(format: "%.0f", idealMin))-\(String(format: "%.0f", idealMax))°\", \"clubType\": \"\(input.clubType.rawValue)\", \"detected\": \(detected)}")
+
         if spineAngle >= idealMin && spineAngle <= idealMax {
             return DetectorResult(
                 mistakeId: mistakeId,
@@ -84,6 +87,9 @@ struct StanceWidthIssueDetector: SwingDetector {
         // Ideal stance ratio: Driver ~2.5-3.0, Iron ~2.0-2.5
         let idealMin: Double = input.clubType == .driver ? 2.3 : 1.8
         let idealMax: Double = input.clubType == .driver ? 3.2 : 2.6
+
+        let detected = stanceRatio < idealMin || stanceRatio > idealMax
+        log.debug("Stance Width Debug | {\"stanceRatio\": \(String(format: "%.2f", stanceRatio)), \"idealRange\": \"\(String(format: "%.1f", idealMin))-\(String(format: "%.1f", idealMax))\", \"clubType\": \"\(input.clubType.rawValue)\", \"detected\": \(detected)}")
 
         if stanceRatio >= idealMin && stanceRatio <= idealMax {
             return DetectorResult(

@@ -122,14 +122,21 @@ nonisolated(unsafe) let allDetectors: [SwingDetector] = [
 
 /// Run all detectors and return results
 func runAllDetectors(input: SwingDetectorInput) -> [DetectorResult] {
-    return allDetectors
-        .filter { detector in
-            // Only run detectors that support the current camera angle
-            detector.supportedCameraAngles.contains(input.cameraAngle) ||
-            detector.supportedCameraAngles.isEmpty  // Empty means all angles
-        }
-        .map { $0.detect(input: input) }
-        .filter { $0.detected || $0.confidence > 0 }
+    let applicableDetectors = allDetectors.filter { detector in
+        // Only run detectors that support the current camera angle
+        detector.supportedCameraAngles.contains(input.cameraAngle) ||
+        detector.supportedCameraAngles.isEmpty  // Empty means all angles
+    }
+
+    log.info("Running All Detectors | {\"cameraAngle\": \"\(input.cameraAngle.rawValue)\", \"clubType\": \"\(input.clubType.rawValue)\", \"isRightHanded\": \(input.isRightHanded), \"totalDetectors\": \(allDetectors.count), \"applicableDetectors\": \(applicableDetectors.count)}")
+
+    let results = applicableDetectors.map { $0.detect(input: input) }
+    let filteredResults = results.filter { $0.detected || $0.confidence > 0 }
+
+    let detected = filteredResults.filter { $0.detected }
+    log.info("Detector Results Summary | {\"totalRun\": \(applicableDetectors.count), \"detected\": \(detected.count), \"detectedMistakes\": \"\(detected.map { $0.mistakeId.rawValue }.joined(separator: ", "))\"}")
+
+    return filteredResults
 }
 
 /// Get only detected mistakes sorted by severity

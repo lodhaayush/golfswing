@@ -39,6 +39,8 @@ struct ChickenWingDetector: SwingDetector {
         // Threshold: arm should be at least 150 degrees through impact
         let threshold: Double = 150
 
+        log.debug("Chicken Wing Debug | {\"minArmExtension\": \"\(String(format: "%.1f", minArmExtension))°\", \"threshold\": \"\(threshold)°\", \"detected\": \(minArmExtension < threshold)}")
+
         if minArmExtension >= threshold {
             return DetectorResult(
                 mistakeId: mistakeId,
@@ -92,6 +94,8 @@ struct PoorArmExtensionDetector: SwingDetector {
 
         // Good extension: both arms near straight (170+)
         let threshold: Double = 165
+
+        log.debug("Poor Arm Extension Debug | {\"leftExtension\": \"\(String(format: "%.1f", leftExtension))°\", \"rightExtension\": \"\(String(format: "%.1f", rightExtension))°\", \"avgExtension\": \"\(String(format: "%.1f", avgExtension))°\", \"threshold\": \"\(threshold)°\", \"detected\": \(avgExtension < threshold)}")
 
         if avgExtension >= threshold {
             return DetectorResult(
@@ -150,6 +154,8 @@ struct HeadMovementDetector: SwingDetector {
         // Threshold: head movement should be less than 8% of body height
         let threshold: Double = 0.08
         let severeThreshold: Double = 0.15
+
+        log.debug("Head Movement Debug | {\"headStability\": \(String(format: "%.3f", headStability)), \"threshold\": \(threshold), \"detected\": \(headStability >= threshold)}")
 
         if headStability < threshold {
             return DetectorResult(

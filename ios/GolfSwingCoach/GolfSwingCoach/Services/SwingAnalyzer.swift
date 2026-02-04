@@ -17,24 +17,31 @@ final class SwingAnalyzer: @unchecked Sendable {
 
         // Step 1: Detect camera angle
         let cameraAngle = detectCameraAngle(from: frames)
+        log.info("Camera Angle Detection | {\"detectedAngle\": \"\(cameraAngle.rawValue)\"}")
         progress(0.2)
 
         // Step 2: Detect club type
         let clubType = detectClubType(from: frames, cameraAngle: cameraAngle)
+        log.info("Club Type Detection | {\"detectedClub\": \"\(clubType.rawValue)\"}")
         progress(0.3)
 
         // Step 3: Detect swing phases using proper velocity-based detection
         let phaseResult = detectSwingPhases(frames: frames)
         let phases = createPhaseSegments(from: phaseResult.phaseFrames)
         let isRightHanded = phaseResult.isRightHanded
+        log.info("Handedness Detection | {\"isRightHanded\": \(isRightHanded), \"leadSide\": \"\(isRightHanded ? "left" : "right")\"}")
         progress(0.5)
 
         // Step 4: Calculate metrics
         let metrics = calculateMetrics(frames: frames, phases: phases, cameraAngle: cameraAngle, isRightHanded: isRightHanded)
+        if let m = metrics {
+            log.info("Swing Metrics | {\"maxShoulderRotation\": \"\(String(format: "%.1f", m.maxShoulderRotation))°\", \"maxHipRotation\": \"\(String(format: "%.1f", m.maxHipRotation))°\", \"maxXFactor\": \"\(String(format: "%.1f", m.maxXFactor))°\", \"addressSpineAngle\": \"\(String(format: "%.1f", m.addressSpineAngle))°\", \"impactSpineAngle\": \"\(String(format: "%.1f", m.impactSpineAngle))°\"}")
+        }
         progress(0.6)
 
         // Step 5: Calculate tempo
         let tempo = calculateTempo(phases: phases)
+        log.info("Tempo Calculated | {\"backswingDuration\": \(String(format: "%.2f", tempo.backswingDuration)), \"downswingDuration\": \(String(format: "%.2f", tempo.downswingDuration)), \"tempoRatio\": \(String(format: "%.2f", tempo.tempoRatio))}")
         progress(0.7)
 
         // Step 6: Run all detectors
@@ -49,10 +56,14 @@ final class SwingAnalyzer: @unchecked Sendable {
         )
 
         let mistakes = runAllDetectors(input: detectorInput)
+        let detectedMistakes = mistakes.filter { $0.detected }
+        log.info("Detected Mistakes | {\"count\": \(detectedMistakes.count), \"mistakes\": \"\(detectedMistakes.map { $0.mistakeId.rawValue }.joined(separator: ", "))\"}")
         progress(0.9)
 
         // Step 7: Calculate overall score
         let overallScore = calculateOverallScore(mistakes: mistakes, metrics: metrics, tempo: tempo)
+        let mistakePenalty = detectedMistakes.reduce(0.0) { $0 + $1.severity * 0.15 }
+        log.info("Score Calculation | {\"baseScore\": 100, \"mistakePenalty\": \(String(format: "%.1f", mistakePenalty)), \"detectedMistakes\": \(detectedMistakes.count), \"finalScore\": \(String(format: "%.1f", overallScore))}")
         progress(1.0)
 
         return AnalysisResult(

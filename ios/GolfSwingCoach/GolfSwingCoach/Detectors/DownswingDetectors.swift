@@ -69,6 +69,8 @@ struct EarlyExtensionDetector: SwingDetector {
         let threshold: CGFloat = 0.12
         let severeThreshold: CGFloat = 0.20
 
+        log.debug("Early Extension Debug | {\"normalizedThrust\": \(String(format: "%.3f", normalizedThrust)), \"threshold\": \(threshold), \"detected\": \(normalizedThrust >= threshold)}")
+
         if normalizedThrust < threshold {
             return DetectorResult(
                 mistakeId: mistakeId,
@@ -154,6 +156,8 @@ struct HangingBackDetector: SwingDetector {
             ? normalizedShift > -0.05  // Should have shifted left, didn't
             : normalizedShift < 0.05   // Should have shifted right, didn't
 
+        log.debug("Hanging Back Debug | {\"normalizedShift\": \(String(format: "%.3f", normalizedShift)), \"isRightHanded\": \(input.isRightHanded), \"detected\": \(isHangingBack)}")
+
         if !isHangingBack {
             return DetectorResult(
                 mistakeId: mistakeId,
@@ -207,6 +211,8 @@ struct LossOfSpineAngleDetector: SwingDetector {
         // Loss of spine angle = standing up through impact (spine becoming more vertical)
         let angleLoss = addressSpineAngle - impactSpineAngle
         let threshold: Double = 8  // degrees
+
+        log.debug("Loss of Spine Angle Debug | {\"addressSpineAngle\": \"\(String(format: "%.1f", addressSpineAngle))°\", \"impactSpineAngle\": \"\(String(format: "%.1f", impactSpineAngle))°\", \"angleLoss\": \"\(String(format: "%.1f", angleLoss))°\", \"threshold\": \"\(threshold)°\", \"detected\": \(angleLoss >= threshold)}")
 
         if angleLoss < threshold {
             return DetectorResult(
@@ -263,6 +269,8 @@ struct SlidingHipsDetector: SwingDetector {
 
         // Ideal: some hip slide is normal (0.1-0.2), excessive is 0.3+
         let excessiveThreshold: Double = 0.25
+
+        log.debug("Sliding Hips Debug | {\"hipSway\": \(String(format: "%.3f", hipSway)), \"excessiveThreshold\": \(excessiveThreshold), \"detected\": \(hipSway >= excessiveThreshold)}")
 
         if hipSway < excessiveThreshold {
             return DetectorResult(

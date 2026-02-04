@@ -20,6 +20,9 @@ struct PoorTempoRatioDetector: SwingDetector {
 
         let ratio = tempo.tempoRatio
 
+        let detected = ratio < minRatio || ratio > maxRatio
+        log.debug("Tempo Debug | {\"tempoRatio\": \(String(format: "%.2f", ratio)), \"idealRatio\": \(idealRatio), \"acceptableRange\": \"\(minRatio)-\(maxRatio)\", \"detected\": \(detected)}")
+
         // Check if ratio is in acceptable range
         if ratio >= minRatio && ratio <= maxRatio {
             return DetectorResult(

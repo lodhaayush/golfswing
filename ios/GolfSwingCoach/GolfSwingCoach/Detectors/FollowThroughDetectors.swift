@@ -39,6 +39,8 @@ struct IncompleteFollowThroughDetector: SwingDetector {
         // (In normalized coords, lower Y = higher position)
         let isHighFinish = absoluteHandY < shoulderY + 0.05
 
+        log.debug("Incomplete Follow Through Debug | {\"absoluteHandY\": \(String(format: "%.3f", absoluteHandY)), \"shoulderY\": \(String(format: "%.3f", shoulderY)), \"isHighFinish\": \(isHighFinish)}")
+
         if isHighFinish {
             return DetectorResult(
                 mistakeId: mistakeId,
@@ -131,6 +133,8 @@ struct UnbalancedFinishDetector: SwingDetector {
         let wobbleThreshold: Double = 0.002
         let isBalanced = totalWobble < wobbleThreshold && weightOnLead
 
+        log.debug("Unbalanced Finish Debug | {\"totalWobble\": \(String(format: "%.4f", totalWobble)), \"wobbleThreshold\": \(wobbleThreshold), \"weightOnLead\": \(weightOnLead), \"detected\": \(!isBalanced)}")
+
         if isBalanced {
             return DetectorResult(
                 mistakeId: mistakeId,
@@ -219,6 +223,8 @@ struct ReverseCFinishDetector: SwingDetector {
         // For left-handers, reverse C = leaning left (negative tilt)
         let reverseCTilt = input.isRightHanded ? lateralTilt : -lateralTilt
         let threshold: Double = 12  // degrees
+
+        log.debug("Reverse C Finish Debug | {\"lateralTilt\": \"\(String(format: "%.1f", lateralTilt))°\", \"reverseCTilt\": \"\(String(format: "%.1f", reverseCTilt))°\", \"threshold\": \"\(threshold)°\", \"detected\": \(reverseCTilt >= threshold)}")
 
         if reverseCTilt < threshold {
             return DetectorResult(

@@ -250,6 +250,8 @@ func detectSwingPhases(frames: [PoseFrame]) -> SwingPhaseResult {
     let impactFrame = impactIdx < phaseFrames.count ? phaseFrames[impactIdx] : nil
     let finishFrame = phaseFrames.last
 
+    log.info("Key Frames | {\"addressEndIdx\": \(addressEndIdx), \"topOfBackswingIdx\": \(topOfBackswingIdx), \"impactIdx\": \(impactIdx), \"finishStartIdx\": \(finishStartIdx), \"isSlowMotion\": \(isSlowMotion)}")
+
     return SwingPhaseResult(
         phaseFrames: phaseFrames,
         keyFrames: .init(
