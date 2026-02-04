@@ -24,6 +24,7 @@
 		8F21BC6AFABBA8ECE2FEF4D6 /* VideoAnalysisViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C551D7EA42509833CFBA18B /* VideoAnalysisViewModel.swift */; };
 		9C033C3ECCCA4572F7F9A158 /* SwingAnalysis.swift in Sources */ = {isa = PBXBuildFile; fileRef = CACCB9CF37192B7079172101 /* SwingAnalysis.swift */; };
 		A22F361776EE59A6366713FC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EDE91F93E0F53AB4AA4C4488 /* Assets.xcassets */; };
+		5B6C7D8E9F0A1B2C3D4E5F6A /* ProVideos in Resources */ = {isa = PBXBuildFile; fileRef = 6C7D8E9F0A1B2C3D4E5F6A7B /* ProVideos */; };
 		B5E0BD726B5791E607F04552 /* LoggerSetup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A9AB97AD46625229296CC2 /* LoggerSetup.swift */; };
 		BCB7C6E6B214F868051BA419 /* SwingPhase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C939B636506246FFF09F1A6 /* SwingPhase.swift */; };
 		C33CF8E1E9B1BD76729E93AE /* SetupDetectors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F95BC3B06F9EF87B51F7637 /* SetupDetectors.swift */; };
@@ -66,6 +67,7 @@
 		EA1D3D312ED2A713EA03E5A6 /* FollowThroughDetectors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowThroughDetectors.swift; sourceTree = "<group>"; };
 		EB25C78D649AADDC9E25C3EA /* AngleCalculations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AngleCalculations.swift; sourceTree = "<group>"; };
 		EDE91F93E0F53AB4AA4C4488 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		6C7D8E9F0A1B2C3D4E5F6A7B /* ProVideos */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ProVideos; sourceTree = "<group>"; };
 		FD7A5558441CB06E334B9C65 /* VideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -84,6 +86,7 @@
 			isa = PBXGroup;
 			children = (
 				EDE91F93E0F53AB4AA4C4488 /* Assets.xcassets */,
+				6C7D8E9F0A1B2C3D4E5F6A7B /* ProVideos */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -246,6 +249,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A22F361776EE59A6366713FC /* Assets.xcassets in Resources */,
+				5B6C7D8E9F0A1B2C3D4E5F6A /* ProVideos in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

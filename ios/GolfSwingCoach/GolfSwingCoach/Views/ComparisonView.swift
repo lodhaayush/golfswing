@@ -60,9 +60,15 @@ struct ComparisonView: View {
 
                             if let proSwing = selectedProSwing {
                                 ZStack {
-                                    // Pro video would show here
-                                    Rectangle()
-                                        .fill(Color(.systemGray5))
+                                    if let proVideoURL = proSwing.videoURL {
+                                        VideoThumbnailView(url: proVideoURL, frameIndex: proFrameIndex)
+                                    } else {
+                                        Rectangle()
+                                            .fill(Color(.systemGray5))
+                                        Image(systemName: "figure.golf")
+                                            .font(.system(size: 40))
+                                            .foregroundColor(.secondary)
+                                    }
 
                                     if showOverlay && proFrameIndex < proSwing.frames.count {
                                         PoseOverlayView(
@@ -70,28 +76,34 @@ struct ComparisonView: View {
                                             videoSize: CGSize(width: 1080, height: 1920)
                                         )
                                     }
-
-                                    Image(systemName: "figure.golf")
-                                        .font(.system(size: 40))
-                                        .foregroundColor(.secondary)
                                 }
                                 .aspectRatio(9/16, contentMode: .fit)
                                 .cornerRadius(8)
                             } else {
                                 // Placeholder for pro selection
-                                Rectangle()
-                                    .fill(Color(.systemGray5))
-                                    .aspectRatio(9/16, contentMode: .fit)
-                                    .cornerRadius(8)
-                                    .overlay {
-                                        VStack {
-                                            Image(systemName: "plus.circle")
-                                                .font(.system(size: 40))
-                                            Text("Select Pro")
-                                                .font(.caption)
+                                Menu {
+                                    ForEach(proSwings) { pro in
+                                        Button {
+                                            selectedProSwing = pro
+                                        } label: {
+                                            Label(pro.name, systemImage: "figure.golf")
                                         }
-                                        .foregroundColor(.secondary)
                                     }
+                                } label: {
+                                    Rectangle()
+                                        .fill(Color(.systemGray5))
+                                        .aspectRatio(9/16, contentMode: .fit)
+                                        .cornerRadius(8)
+                                        .overlay {
+                                            VStack {
+                                                Image(systemName: "plus.circle")
+                                                    .font(.system(size: 40))
+                                                Text("Select Pro")
+                                                    .font(.caption)
+                                            }
+                                            .foregroundColor(.secondary)
+                                        }
+                                }
                             }
                         }
                     }
@@ -184,6 +196,10 @@ struct ComparisonView: View {
                         }
                     }
                 }
+            }
+            .onChange(of: selectedProSwing?.id) { _, _ in
+                // Reset pro frame index when switching pro videos
+                proFrameIndex = 0
             }
         }
     }
@@ -310,27 +326,84 @@ struct ProSwing: Identifiable {
     let name: String
     let clubType: ClubType
     let cameraAngle: CameraAngle
+    let videoFileName: String
     let frames: [PoseFrame]
     let phases: [PhaseSegment]
 
-    /// Bundled pro swings (placeholder - would be loaded from app bundle)
+    /// URL to the bundled video file
+    var videoURL: URL? {
+        Bundle.main.url(forResource: videoFileName, withExtension: "mov", subdirectory: "ProVideos")
+    }
+
+    /// Bundled pro swings with pre-analyzed phase data
     static let bundledSwings: [ProSwing] = [
-        // These would be loaded from JSON files in the app bundle
         ProSwing(
-            id: "tiger_driver",
+            id: "pro-faceon-driver",
             name: "Tiger Woods - Driver",
             clubType: .driver,
             cameraAngle: .faceOn,
-            frames: [],  // Would be loaded from bundle
-            phases: []
+            videoFileName: "pro-faceon-driver",
+            frames: [],
+            phases: [
+                PhaseSegment(phase: .address, startFrame: 0, endFrame: 10, startTime: 0, endTime: 0.667),
+                PhaseSegment(phase: .backswing, startFrame: 11, endFrame: 32, startTime: 0.733, endTime: 2.133),
+                PhaseSegment(phase: .top, startFrame: 33, endFrame: 34, startTime: 2.2, endTime: 2.267),
+                PhaseSegment(phase: .downswing, startFrame: 35, endFrame: 41, startTime: 2.333, endTime: 2.733),
+                PhaseSegment(phase: .impact, startFrame: 42, endFrame: 43, startTime: 2.8, endTime: 2.867),
+                PhaseSegment(phase: .followThrough, startFrame: 44, endFrame: 48, startTime: 2.933, endTime: 3.2),
+                PhaseSegment(phase: .finish, startFrame: 49, endFrame: 57, startTime: 3.267, endTime: 3.8),
+            ]
         ),
         ProSwing(
-            id: "rory_iron",
+            id: "pro-faceon-iron",
             name: "Rory McIlroy - Iron",
             clubType: .iron,
             cameraAngle: .faceOn,
+            videoFileName: "pro-faceon-iron",
             frames: [],
-            phases: []
+            phases: [
+                PhaseSegment(phase: .address, startFrame: 0, endFrame: 8, startTime: 0, endTime: 0.6),
+                PhaseSegment(phase: .backswing, startFrame: 9, endFrame: 15, startTime: 0.6, endTime: 1.067),
+                PhaseSegment(phase: .top, startFrame: 16, endFrame: 17, startTime: 1.067, endTime: 1.2),
+                PhaseSegment(phase: .downswing, startFrame: 18, endFrame: 19, startTime: 1.2, endTime: 1.333),
+                PhaseSegment(phase: .impact, startFrame: 20, endFrame: 21, startTime: 1.333, endTime: 1.467),
+                PhaseSegment(phase: .followThrough, startFrame: 22, endFrame: 32, startTime: 1.467, endTime: 2.2),
+                PhaseSegment(phase: .finish, startFrame: 33, endFrame: 38, startTime: 2.2, endTime: 2.533),
+            ]
+        ),
+        ProSwing(
+            id: "pro-dtl-driver",
+            name: "Tiger Woods - Driver (DTL)",
+            clubType: .driver,
+            cameraAngle: .dtl,
+            videoFileName: "pro-dtl-driver",
+            frames: [],
+            phases: [
+                PhaseSegment(phase: .address, startFrame: 0, endFrame: 25, startTime: 0, endTime: 1.667),
+                PhaseSegment(phase: .backswing, startFrame: 26, endFrame: 45, startTime: 1.733, endTime: 3.0),
+                PhaseSegment(phase: .top, startFrame: 46, endFrame: 47, startTime: 3.067, endTime: 3.133),
+                PhaseSegment(phase: .downswing, startFrame: 48, endFrame: 54, startTime: 3.2, endTime: 3.6),
+                PhaseSegment(phase: .impact, startFrame: 55, endFrame: 56, startTime: 3.667, endTime: 3.733),
+                PhaseSegment(phase: .followThrough, startFrame: 57, endFrame: 65, startTime: 3.8, endTime: 4.333),
+                PhaseSegment(phase: .finish, startFrame: 66, endFrame: 77, startTime: 4.4, endTime: 5.133),
+            ]
+        ),
+        ProSwing(
+            id: "pro-dtl-iron",
+            name: "Justin Rose - Iron (DTL)",
+            clubType: .iron,
+            cameraAngle: .dtl,
+            videoFileName: "pro-dtl-iron",
+            frames: [],
+            phases: [
+                PhaseSegment(phase: .address, startFrame: 0, endFrame: 6, startTime: 0, endTime: 0.467),
+                PhaseSegment(phase: .backswing, startFrame: 7, endFrame: 16, startTime: 0.467, endTime: 1.133),
+                PhaseSegment(phase: .top, startFrame: 17, endFrame: 18, startTime: 1.133, endTime: 1.267),
+                PhaseSegment(phase: .downswing, startFrame: 19, endFrame: 21, startTime: 1.267, endTime: 1.467),
+                PhaseSegment(phase: .impact, startFrame: 22, endFrame: 23, startTime: 1.467, endTime: 1.6),
+                PhaseSegment(phase: .followThrough, startFrame: 24, endFrame: 37, startTime: 1.6, endTime: 2.533),
+                PhaseSegment(phase: .finish, startFrame: 38, endFrame: 44, startTime: 2.533, endTime: 2.933),
+            ]
         ),
     ]
 }

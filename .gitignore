@@ -22,6 +22,7 @@ debug.log
 *.avi
 *.mkv
 !public/videos/*.mov
+!ios/GolfSwingCoach/GolfSwingCoach/Resources/ProVideos/*.mov
 
 # Environment files
 .env
