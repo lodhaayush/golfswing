@@ -14,9 +14,11 @@ struct ComparisonView: View {
     @State private var userFrameIndex: Int = 0
     @State private var proFrameIndex: Int = 0
     @State private var showOverlay = true
+    @State private var playTimer: Timer?
 
     // Available pro swings (would be bundled with app)
     private let proSwings: [ProSwing] = ProSwing.bundledSwings
+    private let fps: Double = 15.0
 
     var body: some View {
         NavigationStack {
@@ -117,7 +119,7 @@ struct ComparisonView: View {
 
                         // Play/Pause synchronized
                         Button {
-                            isPlaying.toggle()
+                            togglePlayback()
                         } label: {
                             Image(systemName: isPlaying ? "pause.fill" : "play.fill")
                                 .font(.title)
@@ -213,6 +215,37 @@ struct ComparisonView: View {
             }
         }
     }
+
+    private func togglePlayback() {
+        if isPlaying {
+            stopPlayback()
+        } else {
+            startPlayback()
+        }
+    }
+
+    private func startPlayback() {
+        isPlaying = true
+        playTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / fps, repeats: true) { [self] _ in
+            Task { @MainActor in
+                if userFrameIndex < userFrames.count - 1 {
+                    userFrameIndex += 1
+                    if let proSwing = selectedProSwing, proFrameIndex < proSwing.frames.count - 1 {
+                        proFrameIndex += 1
+                    }
+                } else {
+                    // Reached end, stop playback
+                    stopPlayback()
+                }
+            }
+        }
+    }
+
+    private func stopPlayback() {
+        isPlaying = false
+        playTimer?.invalidate()
+        playTimer = nil
+    }
 }
 
 /// Simple video thumbnail view for comparison
@@ -221,6 +254,7 @@ struct VideoThumbnailView: View {
     let frameIndex: Int
 
     @State private var image: Image?
+    @State private var loadedFrameIndex: Int = -1
 
     var body: some View {
         ZStack {
@@ -233,15 +267,20 @@ struct VideoThumbnailView: View {
                     .fill(Color(.systemGray5))
             }
         }
-        .task {
+        .task(id: frameIndex) {
             await loadThumbnail()
         }
     }
 
     private func loadThumbnail() async {
+        // Skip if already loaded this frame
+        guard frameIndex != loadedFrameIndex else { return }
+
         let asset = AVAsset(url: url)
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = .zero
 
         let time = CMTime(seconds: Double(frameIndex) / 15.0, preferredTimescale: 600)
 
@@ -249,6 +288,7 @@ struct VideoThumbnailView: View {
             let (cgImage, _) = try await generator.image(at: time)
             await MainActor.run {
                 self.image = Image(decorative: cgImage, scale: 1.0)
+                self.loadedFrameIndex = frameIndex
             }
         } catch {
             // Failed to load thumbnail
