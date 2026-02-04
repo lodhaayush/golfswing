@@ -225,8 +225,14 @@ struct ComparisonView: View {
     }
 
     private func startPlayback() {
+        // If at end, restart from beginning
+        if userFrameIndex >= userFrames.count - 1 {
+            userFrameIndex = 0
+            proFrameIndex = 0
+        }
+
         isPlaying = true
-        playTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / fps, repeats: true) { [self] _ in
+        playTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / fps, repeats: true) { _ in
             Task { @MainActor in
                 if userFrameIndex < userFrames.count - 1 {
                     userFrameIndex += 1
