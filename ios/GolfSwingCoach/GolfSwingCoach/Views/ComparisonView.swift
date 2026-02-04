@@ -219,7 +219,7 @@ struct ComparisonView: View {
             if userFrameIndex < userFrames.count - 1 {
                 userFrameIndex += 1
             }
-            if let proSwing = selectedProSwing, proFrameIndex < proSwing.frames.count - 1 {
+            if let proSwing = selectedProSwing, proFrameIndex < proSwing.frameCount - 1 {
                 proFrameIndex += 1
             }
         } else {
@@ -252,7 +252,7 @@ struct ComparisonView: View {
             Task { @MainActor in
                 if userFrameIndex < userFrames.count - 1 {
                     userFrameIndex += 1
-                    if let proSwing = selectedProSwing, proFrameIndex < proSwing.frames.count - 1 {
+                    if let proSwing = selectedProSwing, proFrameIndex < proSwing.frameCount - 1 {
                         proFrameIndex += 1
                     }
                 } else {
@@ -333,6 +333,11 @@ struct ProSwing: Identifiable {
     /// URL to the bundled video file
     var videoURL: URL? {
         Bundle.main.url(forResource: videoFileName, withExtension: "mov", subdirectory: "ProVideos")
+    }
+
+    /// Total frame count derived from phase segments
+    var frameCount: Int {
+        phases.map { $0.endFrame }.max() ?? 0
     }
 
     /// Bundled pro swings with pre-analyzed phase data
