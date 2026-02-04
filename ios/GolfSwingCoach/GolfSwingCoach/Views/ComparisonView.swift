@@ -22,92 +22,106 @@ struct ComparisonView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                if let userVideoURL = userVideoURL {
-                    // Comparison videos
-                    HStack(spacing: 8) {
-                        // User video
-                        VStack {
-                            Text("Your Swing")
-                                .font(.caption)
-                                .fontWeight(.semibold)
+            GeometryReader { geometry in
+                VStack(spacing: 0) {
+                    if let userVideoURL = userVideoURL {
+                        // Calculate video dimensions to fit side by side
+                        let horizontalPadding: CGFloat = 16 * 2
+                        let spacing: CGFloat = 8
+                        let availableWidth = geometry.size.width - horizontalPadding - spacing
+                        let videoWidth = availableWidth / 2
+                        let videoHeight = min(geometry.size.height * 0.6, videoWidth * (16/9))
 
-                            ZStack {
-                                VideoThumbnailView(url: userVideoURL, frameIndex: userFrameIndex)
+                        HStack(spacing: 8) {
+                            // User video
+                            VStack {
+                                Text("Your Swing")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.center)
 
-                                if showOverlay && userFrameIndex < userFrames.count {
-                                    PoseOverlayView(
-                                        frame: userFrames[userFrameIndex],
-                                        videoSize: CGSize(width: 1080, height: 1920)
-                                    )
-                                }
-                            }
-                            .aspectRatio(9/16, contentMode: .fit)
-                            .cornerRadius(8)
-                            .overlay(alignment: .topTrailing) {
-                                if isUsingMockData {
-                                    MockDataBadge()
-                                        .padding(4)
-                                }
-                            }
-                        }
-
-                        // Pro video
-                        VStack {
-                            Text(selectedProSwing?.name ?? "Select Pro")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-
-                            if let proSwing = selectedProSwing {
                                 ZStack {
-                                    if let proVideoURL = proSwing.videoURL {
-                                        VideoThumbnailView(url: proVideoURL, frameIndex: proFrameIndex)
-                                    } else {
-                                        Rectangle()
-                                            .fill(Color(.systemGray5))
-                                        Image(systemName: "figure.golf")
-                                            .font(.system(size: 40))
-                                            .foregroundColor(.secondary)
-                                    }
+                                    VideoThumbnailView(url: userVideoURL, frameIndex: userFrameIndex)
 
-                                    if showOverlay && proFrameIndex < proSwing.frames.count {
+                                    if showOverlay && userFrameIndex < userFrames.count {
                                         PoseOverlayView(
-                                            frame: proSwing.frames[proFrameIndex],
+                                            frame: userFrames[userFrameIndex],
                                             videoSize: CGSize(width: 1080, height: 1920)
                                         )
                                     }
                                 }
-                                .aspectRatio(9/16, contentMode: .fit)
+                                .frame(width: videoWidth, height: videoHeight)
+                                .clipped()
                                 .cornerRadius(8)
-                            } else {
-                                // Placeholder for pro selection
-                                Menu {
-                                    ForEach(proSwings) { pro in
-                                        Button {
-                                            selectedProSwing = pro
-                                        } label: {
-                                            Label(pro.name, systemImage: "figure.golf")
+                                .overlay(alignment: .topTrailing) {
+                                    if isUsingMockData {
+                                        MockDataBadge()
+                                            .padding(4)
+                                    }
+                                }
+                            }
+
+                            // Pro video
+                            VStack {
+                                Text(selectedProSwing?.name ?? "Select Pro")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.center)
+
+                                if let proSwing = selectedProSwing {
+                                    ZStack {
+                                        if let proVideoURL = proSwing.videoURL {
+                                            VideoThumbnailView(url: proVideoURL, frameIndex: proFrameIndex)
+                                        } else {
+                                            Rectangle()
+                                                .fill(Color(.systemGray5))
+                                            Image(systemName: "figure.golf")
+                                                .font(.system(size: 40))
+                                                .foregroundColor(.secondary)
+                                        }
+
+                                        if showOverlay && proFrameIndex < proSwing.frames.count {
+                                            PoseOverlayView(
+                                                frame: proSwing.frames[proFrameIndex],
+                                                videoSize: CGSize(width: 1080, height: 1920)
+                                            )
                                         }
                                     }
-                                } label: {
-                                    Rectangle()
-                                        .fill(Color(.systemGray5))
-                                        .aspectRatio(9/16, contentMode: .fit)
-                                        .cornerRadius(8)
-                                        .overlay {
-                                            VStack {
-                                                Image(systemName: "plus.circle")
-                                                    .font(.system(size: 40))
-                                                Text("Select Pro")
-                                                    .font(.caption)
+                                    .frame(width: videoWidth, height: videoHeight)
+                                    .clipped()
+                                    .cornerRadius(8)
+                                } else {
+                                    // Placeholder for pro selection
+                                    Menu {
+                                        ForEach(proSwings) { pro in
+                                            Button {
+                                                selectedProSwing = pro
+                                            } label: {
+                                                Label(pro.name, systemImage: "figure.golf")
                                             }
-                                            .foregroundColor(.secondary)
                                         }
+                                    } label: {
+                                        Rectangle()
+                                            .fill(Color(.systemGray5))
+                                            .frame(width: videoWidth, height: videoHeight)
+                                            .clipped()
+                                            .cornerRadius(8)
+                                            .overlay {
+                                                VStack {
+                                                    Image(systemName: "plus.circle")
+                                                        .font(.system(size: 40))
+                                                    Text("Select Pro")
+                                                        .font(.caption)
+                                                }
+                                                .foregroundColor(.secondary)
+                                            }
+                                    }
                                 }
                             }
                         }
-                    }
-                    .padding(.horizontal)
+                        .padding(.horizontal)
 
                     // Phase selector
                     PhaseSelectorView(
@@ -178,6 +192,7 @@ struct ComparisonView: View {
                             .padding(.horizontal)
                     }
                 }
+            }
             }
             .navigationTitle("Compare")
             .toolbar {
