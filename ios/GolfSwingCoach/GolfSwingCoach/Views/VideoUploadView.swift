@@ -56,6 +56,7 @@ struct VideoUploadView: View {
 
                         Button("Select Different Video") {
                             viewModel.reset()
+                            selectedItem = nil
                             appState.lastAnalysisResult = nil
                             appState.lastAnalyzedVideoURL = nil
                             appState.isUsingMockData = false
