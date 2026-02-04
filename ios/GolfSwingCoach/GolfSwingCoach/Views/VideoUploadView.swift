@@ -56,6 +56,9 @@ struct VideoUploadView: View {
 
                         Button("Select Different Video") {
                             viewModel.reset()
+                            appState.lastAnalysisResult = nil
+                            appState.lastAnalyzedVideoURL = nil
+                            appState.isUsingMockData = false
                         }
                         .foregroundColor(.secondary)
                     }
