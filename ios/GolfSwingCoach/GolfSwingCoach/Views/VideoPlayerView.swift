@@ -6,6 +6,7 @@ struct VideoPlayerView: View {
     let videoURL: URL
     let frames: [PoseFrame]
     @Binding var currentFrameIndex: Int
+    var isUsingMockData: Bool = false
 
     @State private var player: AVPlayer?
     @State private var isPlaying = false
@@ -34,6 +35,12 @@ struct VideoPlayerView: View {
             .aspectRatio(9/16, contentMode: .fit)
             .cornerRadius(12)
             .clipped()
+            .overlay(alignment: .topTrailing) {
+                if isUsingMockData {
+                    MockDataBadge()
+                        .padding(8)
+                }
+            }
 
             // Scrubber
             VStack(spacing: 8) {

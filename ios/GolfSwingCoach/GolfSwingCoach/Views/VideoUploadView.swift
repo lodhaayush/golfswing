@@ -105,6 +105,7 @@ struct VideoUploadView: View {
                 if let result = newResult {
                     appState.lastAnalysisResult = result
                     appState.lastAnalyzedVideoURL = viewModel.selectedVideoURL
+                    appState.isUsingMockData = viewModel.isUsingMockData
                 }
             }
         }

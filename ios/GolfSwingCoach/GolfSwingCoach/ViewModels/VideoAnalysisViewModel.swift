@@ -13,6 +13,11 @@ class VideoAnalysisViewModel: ObservableObject {
     private let poseDetectionService = PoseDetectionService()
     private let swingAnalyzer = SwingAnalyzer()
 
+    /// Whether pose detection is using mock data (e.g., on iOS Simulator)
+    var isUsingMockData: Bool {
+        poseDetectionService.isUsingMockData
+    }
+
     func loadVideo(from item: PhotosPickerItem?) async {
         guard let item = item else { return }
 

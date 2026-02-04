@@ -50,5 +50,6 @@ struct ContentView: View {
 class AppState: ObservableObject {
     @Published var lastAnalyzedVideoURL: URL?
     @Published var lastAnalysisResult: AnalysisResult?
+    @Published var isUsingMockData: Bool = false
 }
 

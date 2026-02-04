@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		00959F9992D59EE31B81EA79 /* PoseOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0484F64CAC4E09135CF781B5 /* PoseOverlayView.swift */; };
 		0B14672FFE3AA5D28F02FD64 /* AngleCalculations.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB25C78D649AADDC9E25C3EA /* AngleCalculations.swift */; };
+		1A2B3C4D5E6F7A8B9C0D1E2F /* MockPoseDataGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A3B4C5D6E7F8A9B0C1D2E3F /* MockPoseDataGenerator.swift */; };
+		3A4B5C6D7E8F9A0B1C2D3E4F /* MockDataBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5B6C7D8E9F0A1B2C3D4E5F /* MockDataBadge.swift */; };
 		2B9E1E54A570E9B72928B460 /* FollowThroughDetectors.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA1D3D312ED2A713EA03E5A6 /* FollowThroughDetectors.swift */; };
 		3860D699A3AEC5824E438FDA /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277FC60CD1C37992D9202285 /* ContentView.swift */; };
 		38CC3E9F7BB41DB238D34C9A /* DetectorProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CB060E4C2BF60021BC8983F /* DetectorProtocol.swift */; };
@@ -43,10 +45,12 @@
 		1C0481AB49E89B830C22B158 /* VideoUploadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoUploadView.swift; sourceTree = "<group>"; };
 		1C551D7EA42509833CFBA18B /* VideoAnalysisViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoAnalysisViewModel.swift; sourceTree = "<group>"; };
 		1CF9AFC01A636E9B8E35868B /* ImpactDetectors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImpactDetectors.swift; sourceTree = "<group>"; };
+		2A3B4C5D6E7F8A9B0C1D2E3F /* MockPoseDataGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPoseDataGenerator.swift; sourceTree = "<group>"; };
 		277FC60CD1C37992D9202285 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		3CB060E4C2BF60021BC8983F /* DetectorProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectorProtocol.swift; sourceTree = "<group>"; };
 		3EAF11E43579C35719662789 /* PoseData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoseData.swift; sourceTree = "<group>"; };
 		4AD23D598E3D437FE56EA39B /* PoseDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoseDetectionService.swift; sourceTree = "<group>"; };
+		4A5B6C7D8E9F0A1B2C3D4E5F /* MockDataBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDataBadge.swift; sourceTree = "<group>"; };
 		4BE76CFBE73988A8D799F9E3 /* ComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComparisonView.swift; sourceTree = "<group>"; };
 		5A489C8F5C625F29D2D79E04 /* DownswingDetectors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownswingDetectors.swift; sourceTree = "<group>"; };
 		6378D4D2868C61FBD45BBE1E /* LearningView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningView.swift; sourceTree = "<group>"; };
@@ -70,6 +74,7 @@
 			isa = PBXGroup;
 			children = (
 				173B20308ACF17C46128E16B /* MetricsCard.swift */,
+				4A5B6C7D8E9F0A1B2C3D4E5F /* MockDataBadge.swift */,
 				0484F64CAC4E09135CF781B5 /* PoseOverlayView.swift */,
 			);
 			path = Components;
@@ -173,6 +178,7 @@
 		F59DE35F156B2D5153D994A3 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				2A3B4C5D6E7F8A9B0C1D2E3F /* MockPoseDataGenerator.swift */,
 				4AD23D598E3D437FE56EA39B /* PoseDetectionService.swift */,
 				07D507D961EE2059FB40468C /* SwingAnalyzer.swift */,
 			);
@@ -262,6 +268,8 @@
 				67B7DD3C763F61D78D13BA0D /* LearningView.swift in Sources */,
 				B5E0BD726B5791E607F04552 /* LoggerSetup.swift in Sources */,
 				DE6BFBACD99BAA3C1AA3C58C /* MetricsCard.swift in Sources */,
+				3A4B5C6D7E8F9A0B1C2D3E4F /* MockDataBadge.swift in Sources */,
+				1A2B3C4D5E6F7A8B9C0D1E2F /* MockPoseDataGenerator.swift in Sources */,
 				C3B6178835F40B484B84FB01 /* PhaseDetection.swift in Sources */,
 				80306A27931430C68359F2CE /* PoseData.swift in Sources */,
 				CB3F92D252087DEEAAB1E584 /* PoseDetectionService.swift in Sources */,

@@ -9,6 +9,15 @@ final class PoseDetectionService: @unchecked Sendable {
     /// Target frames per second for extraction
     private let targetFPS: Double = 15.0
 
+    /// Whether running on simulator (Vision pose detection unavailable)
+    var isUsingMockData: Bool {
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        return false
+        #endif
+    }
+
     /// Detect poses in all frames of a video
     /// - Parameters:
     ///   - videoURL: URL to the video file
@@ -33,6 +42,28 @@ final class PoseDetectionService: @unchecked Sendable {
             throw PoseDetectionError.invalidVideo
         }
 
+        #if targetEnvironment(simulator)
+        // Use mock data on simulator where Vision framework pose detection is unavailable
+        log.info("Simulator Detected | Using mock pose data (Vision framework unavailable)")
+        progress(1.0)
+        return MockPoseDataGenerator.generateSwingFrames(duration: durationSeconds, fps: targetFPS)
+        #else
+        return try await detectPosesWithVision(
+            asset: asset,
+            frameCount: frameCount,
+            frameInterval: frameInterval,
+            progress: progress
+        )
+        #endif
+    }
+
+    /// Detect poses using Vision framework (device only)
+    private func detectPosesWithVision(
+        asset: AVAsset,
+        frameCount: Int,
+        frameInterval: Double,
+        progress: @escaping @Sendable (Double) -> Void
+    ) async throws -> [PoseFrame] {
         // Create image generator
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
@@ -76,7 +107,13 @@ final class PoseDetectionService: @unchecked Sendable {
     /// Detect pose in a single image
     private func detectPose(in cgImage: CGImage) async throws -> [Landmark]? {
         return try await withCheckedThrowingContinuation { continuation in
+            // Flag to ensure continuation is only resumed once
+            var hasResumed = false
+
             let request = VNDetectHumanBodyPoseRequest { request, error in
+                guard !hasResumed else { return }
+                hasResumed = true
+
                 if let error = error {
                     continuation.resume(throwing: error)
                     return
@@ -101,6 +138,8 @@ final class PoseDetectionService: @unchecked Sendable {
             do {
                 try handler.perform([request])
             } catch {
+                guard !hasResumed else { return }
+                hasResumed = true
                 continuation.resume(throwing: error)
             }
         }
