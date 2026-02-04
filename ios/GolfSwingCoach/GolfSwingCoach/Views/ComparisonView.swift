@@ -6,6 +6,7 @@ struct ComparisonView: View {
     let userVideoURL: URL?
     let userFrames: [PoseFrame]
     let userPhases: [PhaseSegment]
+    var isUsingMockData: Bool = false
 
     @State private var selectedProSwing: ProSwing?
     @State private var currentPhase: SwingPhase = .address
@@ -41,6 +42,12 @@ struct ComparisonView: View {
                             }
                             .aspectRatio(9/16, contentMode: .fit)
                             .cornerRadius(8)
+                            .overlay(alignment: .topTrailing) {
+                                if isUsingMockData {
+                                    MockDataBadge()
+                                        .padding(4)
+                                }
+                            }
                         }
 
                         // Pro video

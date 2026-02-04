@@ -23,7 +23,8 @@ struct ContentView: View {
             ComparisonView(
                 userVideoURL: appState.lastAnalyzedVideoURL,
                 userFrames: appState.lastAnalysisResult?.frames ?? [],
-                userPhases: appState.lastAnalysisResult?.phases ?? []
+                userPhases: appState.lastAnalysisResult?.phases ?? [],
+                isUsingMockData: appState.isUsingMockData
             )
             .tabItem {
                 Label("Compare", systemImage: "rectangle.split.2x1")
