@@ -35,8 +35,8 @@ struct VideoUploadView: View {
                                     .foregroundColor(scoreColor(result.overallScore))
                             }
 
-                            NavigationLink("View Details") {
-                                ResultsDetailView(result: result)
+                            Button("View Details") {
+                                appState.selectedTab = .results
                             }
                             .buttonStyle(.borderedProminent)
                         } else {

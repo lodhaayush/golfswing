@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var selectedTab: Tab = .upload
     @StateObject private var appState = AppState()
 
     enum Tab {
@@ -12,7 +11,7 @@ struct ContentView: View {
     }
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: $appState.selectedTab) {
             VideoUploadView()
                 .environmentObject(appState)
                 .tabItem {
@@ -49,6 +48,7 @@ struct ContentView: View {
 
 /// Shared app state for passing data between views
 class AppState: ObservableObject {
+    @Published var selectedTab: ContentView.Tab = .upload
     @Published var lastAnalyzedVideoURL: URL?
     @Published var lastAnalysisResult: AnalysisResult?
     @Published var isUsingMockData: Bool = false
