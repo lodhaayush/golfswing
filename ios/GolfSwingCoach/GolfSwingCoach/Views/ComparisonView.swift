@@ -15,30 +15,9 @@ struct ComparisonView: View {
     @State private var proFrameIndex: Int = 0
     @State private var showOverlay = true
     @State private var playTimer: Timer?
-    @State private var playbackSpeed: PlaybackSpeed = .normal
 
     // Available pro swings (would be bundled with app)
     private let proSwings: [ProSwing] = ProSwing.bundledSwings
-
-    /// Playback speed options
-    enum PlaybackSpeed: Double, CaseIterable {
-        case quarter = 0.25
-        case half = 0.5
-        case normal = 1.0
-
-        var label: String {
-            switch self {
-            case .quarter: return "0.25x"
-            case .half: return "0.5x"
-            case .normal: return "1x"
-            }
-        }
-    }
-
-    /// Frames per second adjusted for playback speed
-    private var adjustedFps: Double {
-        15.0 * playbackSpeed.rawValue
-    }
 
     var body: some View {
         NavigationStack {
@@ -155,34 +134,6 @@ struct ComparisonView: View {
 
                     // Controls
                     HStack(spacing: 24) {
-                        // Speed picker
-                        Menu {
-                            ForEach(PlaybackSpeed.allCases, id: \.self) { speed in
-                                Button {
-                                    // Stop and restart if playing to apply new speed
-                                    let wasPlaying = isPlaying
-                                    if wasPlaying { stopPlayback() }
-                                    playbackSpeed = speed
-                                    if wasPlaying { startPlayback() }
-                                } label: {
-                                    HStack {
-                                        Text(speed.label)
-                                        if speed == playbackSpeed {
-                                            Image(systemName: "checkmark")
-                                        }
-                                    }
-                                }
-                            }
-                        } label: {
-                            Text(playbackSpeed.label)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color(.systemGray5))
-                                .cornerRadius(6)
-                        }
-
                         // Step backward
                         Button {
                             stepFrame(forward: false)
@@ -311,7 +262,7 @@ struct ComparisonView: View {
         }
 
         isPlaying = true
-        playTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / adjustedFps, repeats: true) { _ in
+        playTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 15.0, repeats: true) { _ in
             Task { @MainActor in
                 if userFrameIndex < userFrames.count - 1 {
                     userFrameIndex += 1
