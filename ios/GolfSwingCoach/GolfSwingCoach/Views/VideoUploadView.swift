@@ -7,16 +7,26 @@ struct VideoUploadView: View {
     @StateObject private var viewModel = VideoAnalysisViewModel()
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedClubType: ClubType?
+    @State private var showPoseOverlay = false
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
                 if let videoURL = viewModel.selectedVideoURL {
-                    // Video preview
-                    VideoPreviewView(url: videoURL)
-                        .frame(height: 300)
-                        .cornerRadius(12)
-                        .padding(.horizontal)
+                    // Video preview with optional pose overlay
+                    ZStack {
+                        VideoPreviewView(url: videoURL)
+
+                        // Pose overlay when enabled and analysis complete
+                        if showPoseOverlay, let result = viewModel.analysisResult, !result.frames.isEmpty {
+                            // Show pose for first frame as static preview
+                            // (Full scrubbing would require time-synced player)
+                            SimplePoseOverlayView(frame: result.frames[result.frames.count / 2])
+                        }
+                    }
+                    .frame(height: 300)
+                    .cornerRadius(12)
+                    .padding(.horizontal)
 
                     // Analysis controls
                     VStack(spacing: 16) {
@@ -26,6 +36,12 @@ struct VideoUploadView: View {
                             }
                             .padding(.horizontal)
                         } else if let result = viewModel.analysisResult {
+                            // Pose overlay toggle
+                            Toggle(isOn: $showPoseOverlay) {
+                                Label("Show Pose Skeleton", systemImage: "figure.stand")
+                            }
+                            .padding(.horizontal)
+
                             // Show score
                             VStack {
                                 Text("Score")
@@ -74,6 +90,7 @@ struct VideoUploadView: View {
                             viewModel.reset()
                             selectedItem = nil
                             selectedClubType = nil
+                            showPoseOverlay = false
                             appState.lastAnalysisResult = nil
                             appState.lastAnalyzedVideoURL = nil
                             appState.isUsingMockData = false
