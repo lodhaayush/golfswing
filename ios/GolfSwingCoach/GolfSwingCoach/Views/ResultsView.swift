@@ -32,6 +32,7 @@ struct ResultsView: View {
 
 struct ResultsDetailView: View {
     let result: AnalysisResult
+    @State private var showFeedback = false
 
     var body: some View {
         ScrollView {
@@ -91,6 +92,16 @@ struct ResultsDetailView: View {
         }
         .navigationTitle("Analysis Results")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: { showFeedback = true }) {
+                    Label("Feedback", systemImage: "exclamationmark.bubble")
+                }
+            }
+        }
+        .sheet(isPresented: $showFeedback) {
+            FeedbackView()
+        }
     }
 
     private func scoreColor(_ score: Double) -> Color {

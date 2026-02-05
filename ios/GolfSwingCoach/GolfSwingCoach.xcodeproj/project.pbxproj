@@ -38,6 +38,7 @@
 		F3037C481C8927F35ACE24CC /* DownswingDetectors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A489C8F5C625F29D2D79E04 /* DownswingDetectors.swift */; };
 		AAAA1111BBBB2222CCCC3333 /* LearningResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDDD4444EEEE5555FFFF6666 /* LearningResources.swift */; };
 		AAAA2222BBBB3333CCCC4444 /* Scoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDDD5555EEEE6666FFFF7777 /* Scoring.swift */; };
+		AAAA3333BBBB4444CCCC5555 /* FeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDDD6666EEEE7777FFFF8888 /* FeedbackView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -73,6 +74,7 @@
 		FD7A5558441CB06E334B9C65 /* VideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerView.swift; sourceTree = "<group>"; };
 		DDDD4444EEEE5555FFFF6666 /* LearningResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningResources.swift; sourceTree = "<group>"; };
 		DDDD5555EEEE6666FFFF7777 /* Scoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scoring.swift; sourceTree = "<group>"; };
+		DDDD6666EEEE7777FFFF8888 /* FeedbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -183,6 +185,7 @@
 			children = (
 				4BE76CFBE73988A8D799F9E3 /* ComparisonView.swift */,
 				277FC60CD1C37992D9202285 /* ContentView.swift */,
+				DDDD6666EEEE7777FFFF8888 /* FeedbackView.swift */,
 				6378D4D2868C61FBD45BBE1E /* LearningView.swift */,
 				E816DBCB1FF3716F955AE853 /* ResultsView.swift */,
 				FD7A5558441CB06E334B9C65 /* VideoPlayerView.swift */,
@@ -280,6 +283,7 @@
 				3860D699A3AEC5824E438FDA /* ContentView.swift in Sources */,
 				38CC3E9F7BB41DB238D34C9A /* DetectorProtocol.swift in Sources */,
 				F3037C481C8927F35ACE24CC /* DownswingDetectors.swift in Sources */,
+				AAAA3333BBBB4444CCCC5555 /* FeedbackView.swift in Sources */,
 				2B9E1E54A570E9B72928B460 /* FollowThroughDetectors.swift in Sources */,
 				DAFC89E1C4BC43E02A259A6B /* GolfSwingCoachApp.swift in Sources */,
 				CA0781E6413709C3A20E4F16 /* ImpactDetectors.swift in Sources */,
