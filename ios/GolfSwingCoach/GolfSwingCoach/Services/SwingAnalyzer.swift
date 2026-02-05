@@ -76,10 +76,14 @@ final class SwingAnalyzer: @unchecked Sendable {
         log.info("Detected Mistakes | {\"count\": \(detectedMistakes.count), \"mistakes\": \"\(detectedMistakes.map { $0.mistakeId.rawValue }.joined(separator: ", "))\"}")
         progress(0.9)
 
-        // Step 7: Calculate overall score
-        let overallScore = calculateOverallScore(mistakes: mistakes, metrics: metrics, tempo: tempo)
-        let mistakePenalty = detectedMistakes.reduce(0.0) { $0 + $1.severity * 0.15 }
-        log.info("Score Calculation | {\"baseScore\": 100, \"mistakePenalty\": \(String(format: "%.1f", mistakePenalty)), \"detectedMistakes\": \(detectedMistakes.count), \"finalScore\": \(String(format: "%.1f", overallScore))}")
+        // Step 7: Calculate overall score using camera-angle and club-specific weights
+        let overallScore = ScoringCalculator.calculateOverallScore(
+            metrics: metrics,
+            tempo: tempo,
+            cameraAngle: cameraAngle,
+            clubType: clubType,
+            detectedMistakes: detectedMistakes
+        )
         progress(1.0)
 
         return AnalysisResult(
@@ -315,46 +319,6 @@ final class SwingAnalyzer: @unchecked Sendable {
             tempoRatio: tempoRatio,
             totalSwingDuration: backswingDuration + downswingDuration
         )
-    }
-
-    // MARK: - Scoring
-
-    private func calculateOverallScore(
-        mistakes: [DetectorResult],
-        metrics: SwingMetrics?,
-        tempo: TempoMetrics
-    ) -> Double {
-
-        var score = 100.0
-
-        // Deduct for detected mistakes based on severity
-        for mistake in mistakes where mistake.detected {
-            // Scale penalty based on severity (0-100)
-            // Max penalty per mistake: 15 points for severity 100
-            let penalty = mistake.severity * 0.15
-            score -= penalty
-        }
-
-        // Bonus/penalty for key metrics
-        if let metrics = metrics {
-            // Good shoulder rotation bonus
-            if metrics.maxShoulderRotation >= 85 && metrics.maxShoulderRotation <= 100 {
-                score += 2
-            }
-
-            // Good X-factor bonus
-            if metrics.maxXFactor >= 35 && metrics.maxXFactor <= 50 {
-                score += 2
-            }
-        }
-
-        // Good tempo bonus
-        if tempo.tempoRatio >= 2.5 && tempo.tempoRatio <= 3.5 {
-            score += 2
-        }
-
-        // Ensure score is in valid range
-        return max(0, min(100, score))
     }
 }
 
