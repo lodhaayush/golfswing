@@ -13,6 +13,9 @@ class VideoAnalysisViewModel: ObservableObject {
     private let poseDetectionService = PoseDetectionService()
     private let swingAnalyzer = SwingAnalyzer()
 
+    /// Cached pose frames from the last video analysis (for re-analysis with different settings)
+    private var cachedFrames: [PoseFrame]?
+
     /// Whether pose detection is using mock data (e.g., on iOS Simulator)
     var isUsingMockData: Bool {
         poseDetectionService.isUsingMockData
@@ -54,6 +57,8 @@ class VideoAnalysisViewModel: ObservableObject {
                 }
             )
 
+            // Cache frames for potential re-analysis
+            cachedFrames = frames
             analysisProgress = 0.7
 
             // Step 2: Analyze swing (70-100% progress)
@@ -76,11 +81,45 @@ class VideoAnalysisViewModel: ObservableObject {
         isAnalyzing = false
     }
 
+    /// Re-analyze the video with a club type override (uses cached pose frames)
+    func reanalyzeWithClubType(_ clubType: ClubType) async {
+        guard let frames = cachedFrames else {
+            error = "No cached frames available. Please re-upload the video."
+            return
+        }
+
+        isAnalyzing = true
+        analysisProgress = 0
+        error = nil
+
+        do {
+            // Skip pose extraction, go straight to analysis with override
+            let result = try await swingAnalyzer.analyze(
+                frames: frames,
+                clubTypeOverride: clubType,
+                progress: { [weak self] progress in
+                    Task { @MainActor in
+                        self?.analysisProgress = progress
+                    }
+                }
+            )
+
+            analysisProgress = 1.0
+            analysisResult = result
+
+        } catch {
+            self.error = "Re-analysis failed: \(error.localizedDescription)"
+        }
+
+        isAnalyzing = false
+    }
+
     func reset() {
         selectedVideoURL = nil
         analysisResult = nil
         analysisProgress = 0
         error = nil
+        cachedFrames = nil
     }
 }
 

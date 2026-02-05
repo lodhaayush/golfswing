@@ -8,6 +8,16 @@ final class SwingAnalyzer: @unchecked Sendable {
         frames: [PoseFrame],
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> AnalysisResult {
+        // Use auto-detection for club type
+        return try await analyze(frames: frames, clubTypeOverride: nil, progress: progress)
+    }
+
+    /// Analyze pose frames with optional club type override
+    func analyze(
+        frames: [PoseFrame],
+        clubTypeOverride: ClubType?,
+        progress: @escaping @Sendable (Double) -> Void
+    ) async throws -> AnalysisResult {
 
         guard !frames.isEmpty else {
             throw SwingAnalysisError.noFrames
@@ -20,9 +30,15 @@ final class SwingAnalyzer: @unchecked Sendable {
         log.info("Camera Angle Detection | {\"detectedAngle\": \"\(cameraAngle.rawValue)\"}")
         progress(0.2)
 
-        // Step 2: Detect club type
-        let clubType = detectClubType(from: frames, cameraAngle: cameraAngle)
-        log.info("Club Type Detection | {\"detectedClub\": \"\(clubType.rawValue)\"}")
+        // Step 2: Detect or use overridden club type
+        let clubType: ClubType
+        if let override = clubTypeOverride {
+            clubType = override
+            log.info("Club Type Override | {\"clubType\": \"\(clubType.rawValue)\", \"source\": \"user_override\"}")
+        } else {
+            clubType = detectClubType(from: frames, cameraAngle: cameraAngle)
+            log.info("Club Type Detection | {\"detectedClub\": \"\(clubType.rawValue)\", \"source\": \"auto_detected\"}")
+        }
         progress(0.3)
 
         // Step 3: Detect swing phases using proper velocity-based detection

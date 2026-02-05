@@ -6,6 +6,7 @@ struct VideoUploadView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = VideoAnalysisViewModel()
     @State private var selectedItem: PhotosPickerItem?
+    @State private var selectedClubType: ClubType?
 
     var body: some View {
         NavigationStack {
@@ -35,6 +36,20 @@ struct VideoUploadView: View {
                                     .foregroundColor(scoreColor(result.overallScore))
                             }
 
+                            // Club type picker for override
+                            ClubTypePickerView(
+                                detectedClubType: result.clubType,
+                                selectedClubType: $selectedClubType,
+                                onReanalyze: { clubType in
+                                    Task {
+                                        await viewModel.reanalyzeWithClubType(clubType)
+                                        if let newResult = viewModel.analysisResult {
+                                            appState.lastAnalysisResult = newResult
+                                        }
+                                    }
+                                }
+                            )
+
                             Button("View Details") {
                                 appState.selectedTab = .results
                             }
@@ -47,6 +62,7 @@ struct VideoUploadView: View {
                                     if let result = viewModel.analysisResult {
                                         appState.lastAnalysisResult = result
                                         appState.lastAnalyzedVideoURL = viewModel.selectedVideoURL
+                                        selectedClubType = result.clubType
                                     }
                                 }
                             }
@@ -57,6 +73,7 @@ struct VideoUploadView: View {
                         Button("Select Different Video") {
                             viewModel.reset()
                             selectedItem = nil
+                            selectedClubType = nil
                             appState.lastAnalysisResult = nil
                             appState.lastAnalyzedVideoURL = nil
                             appState.isUsingMockData = false
@@ -139,6 +156,49 @@ struct VideoPreviewView: View {
             .onDisappear {
                 player?.pause()
             }
+    }
+}
+
+/// Club type picker for overriding auto-detected club type
+struct ClubTypePickerView: View {
+    let detectedClubType: ClubType
+    @Binding var selectedClubType: ClubType?
+    let onReanalyze: (ClubType) -> Void
+
+    private var displayClubType: ClubType {
+        selectedClubType ?? detectedClubType
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack {
+                Text("Club Type:")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                Picker("Club Type", selection: Binding(
+                    get: { displayClubType },
+                    set: { newValue in
+                        if newValue != displayClubType {
+                            selectedClubType = newValue
+                            onReanalyze(newValue)
+                        }
+                    }
+                )) {
+                    Text("Driver").tag(ClubType.driver)
+                    Text("Iron").tag(ClubType.iron)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 180)
+            }
+
+            if selectedClubType != nil && selectedClubType != detectedClubType {
+                Text("Auto-detected: \(detectedClubType.displayName)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 8)
     }
 }
 
