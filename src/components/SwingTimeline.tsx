@@ -59,11 +59,12 @@ export function SwingTimeline({
         {onRerunAnalysis && (
           <button
             onClick={onRerunAnalysis}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs ${colors.text.muted} ${colors.bg.hover} transition-colors`}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs ${colors.bg.hover} transition-colors`}
             title="Re-run analysis if phases look incorrect"
           >
+            <span className="text-red-500">(Something Wrong?)</span>
             <RefreshCw className="w-3 h-3" />
-            <span>Re-run</span>
+            <span className={colors.text.muted}>Re-run</span>
           </button>
         )}
       </div>
