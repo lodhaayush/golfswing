@@ -30,6 +30,11 @@ struct MetricsCard: View {
 
 struct MistakeCard: View {
     let mistake: DetectorResult
+    @State private var isExpanded = false
+
+    private var resource: LearningResource? {
+        LearningResources.getResource(for: mistake.mistakeId)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -55,6 +60,62 @@ struct MistakeCard: View {
             Text(mistake.message)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+
+            // Learn More section
+            if let resource = resource {
+                Divider()
+                    .padding(.vertical, 4)
+
+                // Drill tip if available
+                if let tip = resource.drillTip {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "lightbulb.fill")
+                            .foregroundColor(.yellow)
+                            .font(.caption)
+                        Text(tip)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.bottom, 4)
+                }
+
+                // Resource buttons
+                HStack(spacing: 8) {
+                    ForEach(resource.youtubeLinks.indices, id: \.self) { index in
+                        let link = resource.youtubeLinks[index]
+                        Button(action: { URLOpener.openYouTube(url: link.url) }) {
+                            Label(
+                                resource.youtubeLinks.count > 1 ? "Video \(index + 1)" : "Watch Video",
+                                systemImage: "play.rectangle.fill"
+                            )
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.red.opacity(0.1))
+                            .foregroundColor(.red)
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    ForEach(resource.articleLinks.indices, id: \.self) { index in
+                        let link = resource.articleLinks[index]
+                        Button(action: { URLOpener.openArticle(url: link.url) }) {
+                            Label(
+                                resource.articleLinks.count > 1 ? "Article \(index + 1)" : "Read Article",
+                                systemImage: "doc.text.fill"
+                            )
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.blue.opacity(0.1))
+                            .foregroundColor(.blue)
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         }
         .padding()
         .background(Color(.systemGray6))

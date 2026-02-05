@@ -36,6 +36,7 @@
 		DE6BFBACD99BAA3C1AA3C58C /* MetricsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 173B20308ACF17C46128E16B /* MetricsCard.swift */; };
 		E9283EFBF5F6C3E5EA992513 /* ResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E816DBCB1FF3716F955AE853 /* ResultsView.swift */; };
 		F3037C481C8927F35ACE24CC /* DownswingDetectors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A489C8F5C625F29D2D79E04 /* DownswingDetectors.swift */; };
+		AAAA1111BBBB2222CCCC3333 /* LearningResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDDD4444EEEE5555FFFF6666 /* LearningResources.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -69,6 +70,7 @@
 		EDE91F93E0F53AB4AA4C4488 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6C7D8E9F0A1B2C3D4E5F6A7B /* ProVideos */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ProVideos; sourceTree = "<group>"; };
 		FD7A5558441CB06E334B9C65 /* VideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerView.swift; sourceTree = "<group>"; };
+		DDDD4444EEEE5555FFFF6666 /* LearningResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningResources.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -80,6 +82,14 @@
 				0484F64CAC4E09135CF781B5 /* PoseOverlayView.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		AAAA7777BBBB8888CCCC9999 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				DDDD4444EEEE5555FFFF6666 /* LearningResources.swift */,
+			);
+			path = Data;
 			sourceTree = "<group>";
 		};
 		2E7546CE2E095B37992B36B2 /* Resources */ = {
@@ -131,6 +141,7 @@
 			isa = PBXGroup;
 			children = (
 				A6EB26C2299619A2C2927BFB /* GolfSwingCoachApp.swift */,
+				AAAA7777BBBB8888CCCC9999 /* Data */,
 				C73B15AF0842301E95A55405 /* Detectors */,
 				BD79589F27A08D2160B8419D /* Models */,
 				2E7546CE2E095B37992B36B2 /* Resources */,
@@ -269,6 +280,7 @@
 				2B9E1E54A570E9B72928B460 /* FollowThroughDetectors.swift in Sources */,
 				DAFC89E1C4BC43E02A259A6B /* GolfSwingCoachApp.swift in Sources */,
 				CA0781E6413709C3A20E4F16 /* ImpactDetectors.swift in Sources */,
+				AAAA1111BBBB2222CCCC3333 /* LearningResources.swift in Sources */,
 				67B7DD3C763F61D78D13BA0D /* LearningView.swift in Sources */,
 				B5E0BD726B5791E607F04552 /* LoggerSetup.swift in Sources */,
 				DE6BFBACD99BAA3C1AA3C58C /* MetricsCard.swift in Sources */,
