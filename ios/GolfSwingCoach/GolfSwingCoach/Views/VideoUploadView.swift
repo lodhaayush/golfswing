@@ -6,27 +6,16 @@ struct VideoUploadView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = VideoAnalysisViewModel()
     @State private var selectedItem: PhotosPickerItem?
-    @State private var selectedClubType: ClubType?
-    @State private var showPoseOverlay = false
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
                 if let videoURL = viewModel.selectedVideoURL {
-                    // Video preview with optional pose overlay
-                    ZStack {
-                        VideoPreviewView(url: videoURL)
-
-                        // Pose overlay when enabled and analysis complete
-                        if showPoseOverlay, let result = viewModel.analysisResult, !result.frames.isEmpty {
-                            // Show pose for first frame as static preview
-                            // (Full scrubbing would require time-synced player)
-                            SimplePoseOverlayView(frame: result.frames[result.frames.count / 2])
-                        }
-                    }
-                    .frame(height: 300)
-                    .cornerRadius(12)
-                    .padding(.horizontal)
+                    // Video preview
+                    VideoPreviewView(url: videoURL)
+                        .frame(height: 300)
+                        .cornerRadius(12)
+                        .padding(.horizontal)
 
                     // Analysis controls
                     VStack(spacing: 16) {
@@ -35,42 +24,7 @@ struct VideoUploadView: View {
                                 Text("Analyzing swing...")
                             }
                             .padding(.horizontal)
-                        } else if let result = viewModel.analysisResult {
-                            // Pose overlay toggle
-                            Toggle(isOn: $showPoseOverlay) {
-                                Label("Show Pose Skeleton", systemImage: "figure.stand")
-                            }
-                            .padding(.horizontal)
-
-                            // Show score
-                            VStack {
-                                Text("Score")
-                                    .font(.headline)
-                                    .foregroundColor(.secondary)
-                                Text("\(Int(result.overallScore))")
-                                    .font(.system(size: 72, weight: .bold))
-                                    .foregroundColor(scoreColor(result.overallScore))
-                            }
-
-                            // Club type picker for override
-                            ClubTypePickerView(
-                                detectedClubType: result.clubType,
-                                selectedClubType: $selectedClubType,
-                                onReanalyze: { clubType in
-                                    Task {
-                                        await viewModel.reanalyzeWithClubType(clubType)
-                                        if let newResult = viewModel.analysisResult {
-                                            appState.lastAnalysisResult = newResult
-                                        }
-                                    }
-                                }
-                            )
-
-                            Button("View Details") {
-                                appState.selectedTab = .results
-                            }
-                            .buttonStyle(.borderedProminent)
-                        } else {
+                        } else if viewModel.analysisResult == nil {
                             Button("Analyze Swing") {
                                 Task {
                                     await viewModel.analyzeVideo()
@@ -78,7 +32,7 @@ struct VideoUploadView: View {
                                     if let result = viewModel.analysisResult {
                                         appState.lastAnalysisResult = result
                                         appState.lastAnalyzedVideoURL = viewModel.selectedVideoURL
-                                        selectedClubType = result.clubType
+                                        appState.selectedTab = .results
                                     }
                                 }
                             }
@@ -89,8 +43,6 @@ struct VideoUploadView: View {
                         Button("Select Different Video") {
                             viewModel.reset()
                             selectedItem = nil
-                            selectedClubType = nil
-                            showPoseOverlay = false
                             appState.lastAnalysisResult = nil
                             appState.lastAnalyzedVideoURL = nil
                             appState.isUsingMockData = false
@@ -148,17 +100,6 @@ struct VideoUploadView: View {
             }
         }
     }
-
-    private func scoreColor(_ score: Double) -> Color {
-        switch score {
-        case 80...:
-            return .green
-        case 60..<80:
-            return .yellow
-        default:
-            return .red
-        }
-    }
 }
 
 struct VideoPreviewView: View {
@@ -175,47 +116,3 @@ struct VideoPreviewView: View {
             }
     }
 }
-
-/// Club type picker for overriding auto-detected club type
-struct ClubTypePickerView: View {
-    let detectedClubType: ClubType
-    @Binding var selectedClubType: ClubType?
-    let onReanalyze: (ClubType) -> Void
-
-    private var displayClubType: ClubType {
-        selectedClubType ?? detectedClubType
-    }
-
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Text("Club Type:")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                Picker("Club Type", selection: Binding(
-                    get: { displayClubType },
-                    set: { newValue in
-                        if newValue != displayClubType {
-                            selectedClubType = newValue
-                            onReanalyze(newValue)
-                        }
-                    }
-                )) {
-                    Text("Driver").tag(ClubType.driver)
-                    Text("Iron").tag(ClubType.iron)
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 180)
-            }
-
-            if selectedClubType != nil && selectedClubType != detectedClubType {
-                Text("Auto-detected: \(detectedClubType.displayName)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(.vertical, 8)
-    }
-}
-
