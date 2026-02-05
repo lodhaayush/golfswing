@@ -12,11 +12,9 @@ interface UseDualVideoSyncOptions {
 interface UseDualVideoSyncReturn {
   isPlaying: boolean
   currentPhase: SwingPhase | null
-  playbackSpeed: number
   play: () => void
   pause: () => void
   togglePlay: () => void
-  setPlaybackSpeed: (speed: number) => void
   seekToPhase: (phase: SwingPhase) => void
   seekUserVideo: (time: number) => void
   userCurrentTime: number
@@ -71,7 +69,6 @@ export function useDualVideoSync({
   proPhases,
 }: UseDualVideoSyncOptions): UseDualVideoSyncReturn {
   const [isPlaying, setIsPlaying] = useState(false)
-  const [playbackSpeed, setPlaybackSpeedState] = useState(1.0)
   const [userCurrentTime, setUserCurrentTime] = useState(0)
   const [proCurrentTime, setProCurrentTime] = useState(0)
   const [userDuration, setUserDuration] = useState(0)
@@ -112,12 +109,10 @@ export function useDualVideoSync({
 
     const handleUserLoaded = () => {
       setUserDuration(userVideo.duration)
-      userVideo.playbackRate = playbackSpeed
     }
 
     const handleProLoaded = () => {
       setProDuration(proVideo.duration)
-      proVideo.playbackRate = playbackSpeed
     }
 
     const handlePlay = () => setIsPlaying(true)
@@ -146,15 +141,7 @@ export function useDualVideoSync({
       proVideo.removeEventListener('timeupdate', handleProTimeUpdate)
       proVideo.removeEventListener('loadedmetadata', handleProLoaded)
     }
-  }, [userVideoRef, proVideoRef, playbackSpeed, videosReady])
-
-  // Update playback speed on both videos
-  useEffect(() => {
-    const userVideo = userVideoRef.current
-    const proVideo = proVideoRef.current
-    if (userVideo) userVideo.playbackRate = playbackSpeed
-    if (proVideo) proVideo.playbackRate = playbackSpeed
-  }, [playbackSpeed, userVideoRef, proVideoRef])
+  }, [userVideoRef, proVideoRef, videosReady])
 
   const play = useCallback(() => {
     const userVideo = userVideoRef.current
@@ -177,10 +164,6 @@ export function useDualVideoSync({
       play()
     }
   }, [isPlaying, play, pause])
-
-  const setPlaybackSpeed = useCallback((speed: number) => {
-    setPlaybackSpeedState(speed)
-  }, [])
 
   const seekToPhase = useCallback(
     (phase: SwingPhase) => {
@@ -224,11 +207,9 @@ export function useDualVideoSync({
   return {
     isPlaying,
     currentPhase,
-    playbackSpeed,
     play,
     pause,
     togglePlay,
-    setPlaybackSpeed,
     seekToPhase,
     seekUserVideo,
     userCurrentTime,

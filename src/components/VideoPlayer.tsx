@@ -56,8 +56,6 @@ export function VideoPlayer({
         width: video.videoWidth,
         height: video.videoHeight,
       })
-      // Set default playback speed to 0.25x for swing analysis
-      video.playbackRate = 0.25
     }
 
     const handleEnded = () => setIsPlaying(false)
