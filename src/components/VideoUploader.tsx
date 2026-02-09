@@ -79,7 +79,7 @@ export function VideoUploader({ onVideoSelect }: VideoUploaderProps) {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`
-          relative border-2 border-dashed rounded-xl p-12 text-center cursor-pointer
+          relative border-2 border-dashed rounded-xl p-6 sm:p-12 text-center cursor-pointer
           transition-all duration-200
           ${isDragging
             ? colors.primary.dragOver

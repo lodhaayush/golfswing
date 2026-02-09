@@ -187,7 +187,7 @@ export function VideoPlayer({
       <div className="mt-4 space-y-4">
         {/* Seek Bar */}
         <div className="flex items-center gap-3">
-          <div className={`text-sm ${colors.text.secondary} w-24 text-right font-mono`}>
+          <div className={`text-sm ${colors.text.secondary} w-16 sm:w-24 text-right font-mono`}>
             <div>{formatTime(currentTime)}</div>
             {currentFrame !== null && (
               <div className={`text-xs ${colors.text.subtle}`}>F{currentFrame}</div>
@@ -208,7 +208,7 @@ export function VideoPlayer({
               [&::-webkit-slider-thumb]:rounded-full
               [&::-webkit-slider-thumb]:cursor-pointer`}
           />
-          <div className={`text-sm ${colors.text.secondary} w-24 font-mono`}>
+          <div className={`text-sm ${colors.text.secondary} w-16 sm:w-24 font-mono`}>
             <div>{formatTime(duration)}</div>
             {totalFrames !== null && (
               <div className={`text-xs ${colors.text.subtle}`}>F{totalFrames}</div>

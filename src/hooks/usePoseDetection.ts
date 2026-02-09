@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Pose, Results } from '@mediapipe/pose'
 import { logger } from '@/utils/debugLogger'
+import { withTimeout, TimeoutError } from '@/utils/promiseTimeout'
 import type { Landmark } from '@/types/pose'
 
 interface UsePoseDetectionResult {
@@ -58,7 +59,11 @@ async function getOrCreatePose(): Promise<Pose> {
     })
 
     logger.info('usePoseDetection: Calling pose.initialize()...')
-    await pose.initialize()
+    await withTimeout(
+      pose.initialize(),
+      30000,
+      'MediaPipe Pose model initialization'
+    )
     logger.info('usePoseDetection: Model initialized successfully!')
 
     poseInstance = pose
@@ -172,10 +177,23 @@ export function usePoseDetection(): UsePoseDetectionResult {
         return null
       }
 
-      return new Promise((resolve) => {
-        resolveRef.current = resolve
-        poseInstance!.send({ image: imageSource })
-      })
+      try {
+        return await withTimeout(
+          new Promise<Landmark[] | null>((resolve) => {
+            resolveRef.current = resolve
+            poseInstance!.send({ image: imageSource })
+          }),
+          10000,
+          'detectPose'
+        )
+      } catch (err) {
+        if (err instanceof TimeoutError) {
+          logger.warn('usePoseDetection: detectPose timed out, returning null for this frame')
+          resolveRef.current = null
+          return null
+        }
+        throw err
+      }
     },
     [isReady]
   )

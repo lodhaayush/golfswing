@@ -274,28 +274,29 @@ function App() {
       <header className={`border-b ${colors.border.default} ${colors.bg.header}`}>
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <h1 className={`text-2xl font-bold ${colors.primary.text}`}>Golf Swing Coach</h1>
-            <p className={`${colors.text.secondary} text-sm`}>Analyze your swing with AI-powered pose detection</p>
+            <h1 className={`text-xl sm:text-2xl font-bold ${colors.primary.text}`}>Golf Swing Coach</h1>
+            <p className={`${colors.text.secondary} text-sm hidden sm:block`}>Analyze your swing with AI-powered pose detection</p>
           </div>
-          <nav className="flex items-center gap-2">
+          <nav className="flex items-center gap-1 sm:gap-2">
             {/* Analyze Tab */}
             <button
               onClick={handleGoToAnalyze}
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+              className={`px-2 py-2 sm:px-4 rounded-lg transition-colors flex items-center gap-2 ${
                 appState === 'upload' || appState === 'player' || appState === 'analyzing'
                   ? colors.primary.active
                   : `${colors.text.secondary} ${colors.text.hover} ${colors.bg.hover}`
               }`}
               disabled={appState === 'analyzing'}
+              title="Analyze"
             >
               <Upload className="w-4 h-4" />
-              Analyze
+              <span className="hidden sm:inline">Analyze</span>
             </button>
 
             {/* Results Tab */}
             <button
               onClick={handleGoToResults}
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+              className={`px-2 py-2 sm:px-4 rounded-lg transition-colors flex items-center gap-2 ${
                 appState === 'results' || appState === 'comparison'
                   ? colors.primary.active
                   : !analysisResult
@@ -303,33 +304,36 @@ function App() {
                     : `${colors.text.secondary} ${colors.text.hover} ${colors.bg.hover}`
               }`}
               disabled={appState === 'analyzing' || !analysisResult}
+              title="Results"
             >
               <BarChart2 className="w-4 h-4" />
-              Results
+              <span className="hidden sm:inline">Results</span>
             </button>
 
             {/* Learn Tab */}
             <button
               onClick={handleGoToLearning}
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+              className={`px-2 py-2 sm:px-4 rounded-lg transition-colors flex items-center gap-2 ${
                 appState === 'learning' || appState === 'mistakeDetail'
                   ? colors.primary.active
                   : `${colors.text.secondary} ${colors.text.hover} ${colors.bg.hover}`
               }`}
               disabled={appState === 'analyzing'}
+              title="Learn"
             >
               <BookOpen className="w-4 h-4" />
-              Learn
+              <span className="hidden sm:inline">Learn</span>
             </button>
 
             {/* Feedback Button */}
             <button
               onClick={() => setShowFeedback(true)}
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${colors.text.secondary} ${colors.text.hover} ${colors.bg.hover}`}
+              className={`px-2 py-2 sm:px-4 rounded-lg transition-colors flex items-center gap-2 ${colors.text.secondary} ${colors.text.hover} ${colors.bg.hover}`}
               disabled={appState === 'analyzing'}
+              title="Feedback"
             >
               <MessageSquare className="w-4 h-4" />
-              Feedback
+              <span className="hidden sm:inline">Feedback</span>
             </button>
 
             <ThemeToggle />
@@ -338,7 +342,7 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-4 sm:py-8">
         {appState === 'upload' && (
           <div className="space-y-8">
             <VideoUploader onVideoSelect={handleVideoSelect} />

@@ -1,4 +1,6 @@
 import { useCallback, useRef } from 'react'
+import { withTimeout } from '@/utils/promiseTimeout'
+import { logger } from '@/utils/debugLogger'
 
 interface FrameData {
   canvas: HTMLCanvasElement
@@ -32,18 +34,24 @@ export function useFrameExtractor(): UseFrameExtractorResult {
 
       // Ensure video is loaded
       if (video.readyState < 2) {
-        await new Promise<void>((resolve, reject) => {
-          const handleLoaded = () => {
-            video.removeEventListener('loadeddata', handleLoaded)
-            resolve()
-          }
-          const handleError = () => {
-            video.removeEventListener('error', handleError)
-            reject(new Error('Failed to load video'))
-          }
-          video.addEventListener('loadeddata', handleLoaded)
-          video.addEventListener('error', handleError)
-        })
+        await withTimeout(
+          new Promise<void>((resolve, reject) => {
+            const handleLoaded = () => {
+              video.removeEventListener('loadeddata', handleLoaded)
+              video.removeEventListener('error', handleError)
+              resolve()
+            }
+            const handleError = () => {
+              video.removeEventListener('loadeddata', handleLoaded)
+              video.removeEventListener('error', handleError)
+              reject(new Error('Failed to load video'))
+            }
+            video.addEventListener('loadeddata', handleLoaded)
+            video.addEventListener('error', handleError)
+          }),
+          15000,
+          'video loadeddata'
+        )
       }
 
       const duration = video.duration
@@ -78,17 +86,26 @@ export function useFrameExtractor(): UseFrameExtractorResult {
           return
         }
 
-        // Seek to time
-        video.currentTime = time
+        // Seek to time -- attach listener BEFORE setting currentTime to avoid race
+        await withTimeout(
+          new Promise<void>((resolve) => {
+            // If already at the target time (within 1ms), skip seeking
+            if (Math.abs(video.currentTime - time) < 0.001) {
+              resolve()
+              return
+            }
 
-        // Wait for seek to complete
-        await new Promise<void>((resolve) => {
-          const handleSeeked = () => {
-            video.removeEventListener('seeked', handleSeeked)
-            resolve()
-          }
-          video.addEventListener('seeked', handleSeeked)
-        })
+            const handleSeeked = () => {
+              video.removeEventListener('seeked', handleSeeked)
+              resolve()
+            }
+            // Attach listener BEFORE triggering seek
+            video.addEventListener('seeked', handleSeeked)
+            video.currentTime = time
+          }),
+          5000,
+          `video seek to ${time.toFixed(3)}s`
+        )
 
         // Draw frame to canvas
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)

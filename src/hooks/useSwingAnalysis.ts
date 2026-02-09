@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { usePoseDetection } from './usePoseDetection'
 import { useFrameExtractor } from './useFrameExtractor'
 import { logger } from '@/utils/debugLogger'
+import { withTimeout, TimeoutError } from '@/utils/promiseTimeout'
 import type { PoseFrame } from '@/types/pose'
 
 export type AnalysisPhase = 'idle' | 'loading_model' | 'extracting_frames' | 'detecting_poses' | 'complete' | 'error'
@@ -76,22 +77,26 @@ export function useSwingAnalysis(): UseSwingAnalysisResult {
           })
 
           // Wait for model to be ready (using refs for current values)
-          await new Promise<void>((resolve, reject) => {
-            const checkReady = setInterval(() => {
-              if (signal.aborted) {
-                clearInterval(checkReady)
-                reject(new Error('Cancelled'))
-              }
-              if (modelReadyRef.current) {
-                clearInterval(checkReady)
-                resolve()
-              }
-              if (modelErrorRef.current) {
-                clearInterval(checkReady)
-                reject(new Error(modelErrorRef.current))
-              }
-            }, 100)
-          })
+          await withTimeout(
+            new Promise<void>((resolve, reject) => {
+              const checkReady = setInterval(() => {
+                if (signal.aborted) {
+                  clearInterval(checkReady)
+                  reject(new Error('Cancelled'))
+                }
+                if (modelReadyRef.current) {
+                  clearInterval(checkReady)
+                  resolve()
+                }
+                if (modelErrorRef.current) {
+                  clearInterval(checkReady)
+                  reject(new Error(modelErrorRef.current))
+                }
+              }, 100)
+            }),
+            45000,
+            'waiting for pose detection model'
+          )
         }
 
         if (!modelReadyRef.current) {
@@ -191,7 +196,20 @@ export function useSwingAnalysis(): UseSwingAnalysisResult {
         setIsAnalyzing(false)
         return poseFrames
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Analysis failed'
+        let message = err instanceof Error ? err.message : 'Analysis failed'
+
+        // Provide user-friendly messages for timeout errors
+        if (err instanceof TimeoutError) {
+          const raw = err.message
+          if (raw.includes('model') || raw.includes('Model')) {
+            message = 'Model loading timed out. Please check your internet connection and try again.'
+          } else if (raw.includes('video') || raw.includes('loadeddata')) {
+            message = 'Video processing timed out. Try a shorter video or a different format.'
+          } else {
+            message = 'Analysis timed out. Please try again.'
+          }
+        }
+
         logger.error('startAnalysis error:', err instanceof Error ? { message: err.message, stack: err.stack } : err)
         if (message !== 'Cancelled') {
           setError(message)
