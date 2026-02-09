@@ -192,7 +192,7 @@ export function SwingResults({ result, onUploadNew, onClubTypeChange, onCompare,
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
       {/* Overall Score Card */}
-      <div className={`${colors.bg.card} rounded-xl p-6`}>
+      <div className={`${colors.bg.card} rounded-xl p-4 sm:p-6`}>
         <h2 className={`text-xl font-bold ${colors.text.primary} mb-4 flex items-center gap-2`}>
           <Zap className={`w-5 h-5 ${colors.icon.score}`} />
           Overall Score
@@ -200,12 +200,12 @@ export function SwingResults({ result, onUploadNew, onClubTypeChange, onCompare,
         <div className="flex items-center justify-center py-4">
           <ScoreGauge score={result.overallScore} />
         </div>
-        <div className={`flex items-center justify-center gap-4 mt-4 text-sm ${colors.text.secondary}`}>
+        <div className={`flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-4 text-sm ${colors.text.secondary}`}>
           <div className="flex items-center gap-1.5">
             <User className="w-4 h-4" />
             <span>{result.isRightHanded ? 'Right-handed' : 'Left-handed'}</span>
           </div>
-          <div className={colors.border.divider}>|</div>
+          <div className={`hidden sm:block ${colors.border.divider}`}>|</div>
           <div className="flex items-center gap-1.5">
             <Camera className="w-4 h-4" />
             <span>{getCameraAngleLabel(result.cameraAngle)}</span>
@@ -219,7 +219,7 @@ export function SwingResults({ result, onUploadNew, onClubTypeChange, onCompare,
               <span className={colors.status.errorBadge}>(low confidence)</span>
             )}
           </div>
-          <div className={colors.border.divider}>|</div>
+          <div className={`hidden sm:block ${colors.border.divider}`}>|</div>
           <div className="flex items-center gap-1.5">
             <Target className="w-4 h-4" />
             {!isEditingClub ? (
@@ -276,7 +276,7 @@ export function SwingResults({ result, onUploadNew, onClubTypeChange, onCompare,
       </div>
 
       {/* Key Metrics Grid */}
-      <div className={`${colors.bg.card} rounded-xl p-6`}>
+      <div className={`${colors.bg.card} rounded-xl p-4 sm:p-6`}>
         <h2 className={`text-xl font-bold ${colors.text.primary} mb-4 flex items-center gap-2`}>
           <RotateCw className={`w-5 h-5 ${colors.icon.rotation}`} />
           Rotation Metrics
@@ -316,7 +316,7 @@ export function SwingResults({ result, onUploadNew, onClubTypeChange, onCompare,
       </div>
 
       {/* Tempo Metrics */}
-      <div className={`${colors.bg.card} rounded-xl p-6`}>
+      <div className={`${colors.bg.card} rounded-xl p-4 sm:p-6`}>
         <h2 className={`text-xl font-bold ${colors.text.primary} mb-4 flex items-center gap-2`}>
           <Clock className={`w-5 h-5 ${colors.icon.tempo}`} />
           Tempo Analysis
@@ -344,7 +344,7 @@ export function SwingResults({ result, onUploadNew, onClubTypeChange, onCompare,
       </div>
 
       {/* Posture Metrics */}
-      <div className={`${colors.bg.card} rounded-xl p-6`}>
+      <div className={`${colors.bg.card} rounded-xl p-4 sm:p-6`}>
         <h2 className={`text-xl font-bold ${colors.text.primary} mb-4 flex items-center gap-2`}>
           <User className={`w-5 h-5 ${colors.icon.posture}`} />
           Posture & Arm Position
@@ -384,7 +384,7 @@ export function SwingResults({ result, onUploadNew, onClubTypeChange, onCompare,
 
       {/* Face-On Specific Metrics - only shown for face-on camera angle */}
       {isFaceOn && (result.metrics.headStability !== undefined || result.metrics.impactExtension !== undefined) && (
-        <div className={`${colors.bg.card} rounded-xl p-6`}>
+        <div className={`${colors.bg.card} rounded-xl p-4 sm:p-6`}>
           <h2 className={`text-xl font-bold ${colors.text.primary} mb-4 flex items-center gap-2`}>
             <Target className={`w-5 h-5 ${colors.icon.balance}`} />
             Balance & Extension
@@ -443,7 +443,7 @@ export function SwingResults({ result, onUploadNew, onClubTypeChange, onCompare,
 
       {/* No Issues Found */}
       {result.detectedMistakes && result.detectedMistakes.length === 0 && (
-        <div className={`${colors.bg.card} rounded-xl p-6`}>
+        <div className={`${colors.bg.card} rounded-xl p-4 sm:p-6`}>
           <div className={`flex items-center gap-3 ${colors.status.success}`}>
             <CheckCircle className="w-6 h-6" />
             <span className="text-lg font-medium">No major swing issues detected!</span>
