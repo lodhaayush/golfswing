@@ -1,6 +1,5 @@
 import { useCallback, useRef } from 'react'
 import { withTimeout } from '@/utils/promiseTimeout'
-import { logger } from '@/utils/debugLogger'
 
 interface FrameData {
   canvas: HTMLCanvasElement
